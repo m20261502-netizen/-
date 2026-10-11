@@ -1,237 +1,100 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>각도 판별기 - 교사용 화면</title>
-    <style>
-        body {
-            font-family: 'Malgun Gothic', sans-serif;
-            background-color: #f4f7f6;
-            margin: 0;
-            padding: 20px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        }
-        .container {
-            background-color: white;
-            padding: 30px;
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-            width: 100%;
-            max-width: 800px;
-            text-align: center;
-        }
-        h1 {
-            color: #2c3e50;
-            margin-bottom: 5px;
-        }
-        p.desc {
-            color: #7f8c8d;
-            margin-bottom: 20px;
-        }
-        .control-panel {
-            background-color: #eaf2f8;
-            padding: 15px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        input[type="text"] {
-            width: 70%;
-            padding: 10px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 14px;
-        }
-        button {
-            padding: 10px 20px;
-            background-color: #3498db;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            font-size: 14px;
-            cursor: pointer;
-            transition: background-color 0.3s;
-        }
-        button:hover {
-            background-color: #2980b9;
-        }
-        #webcam-container {
-            margin: 20px auto;
-            border: 4px dashed #bdc3c7;
-            border-radius: 8px;
-            padding: 10px;
-            display: inline-block;
-            background-color: #ecf0f1;
-        }
-        #webcam-container canvas {
-            border-radius: 4px;
-        }
-        #label-container {
-            margin-top: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .label-row {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            background-color: #fff;
-            border: 1px solid #e0e0e0;
-            padding: 10px 15px;
-            border-radius: 6px;
-        }
-        .label-name {
-            font-weight: bold;
-            font-size: 18px;
-            width: 120px;
-            text-align: left;
-        }
-        .progress-bar-bg {
-            flex-grow: 1;
-            background-color: #ecf0f1;
-            border-radius: 10px;
-            height: 20px;
-            margin: 0 15px;
-            overflow: hidden;
-            position: relative;
-        }
-        .progress-bar-fill {
-            background-color: #2ecc71;
-            height: 100%;
-            width: 0%;
-            transition: width 0.1s;
-        }
-        .percent-text {
-            font-size: 16px;
-            font-weight: bold;
-            width: 60px;
-            text-align: right;
-            color: #2c3e50;
-        }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>초등 수학 각도 확인 도구</title>
+<style>
+:root{--ink:#203047;--muted:#637187;--line:#dce4ee;--paper:#f4f7fb;--blue:#2857c5;--blue2:#eaf0ff;--green:#18794e;--red:#b42318;--amber:#8a5700}
+*{box-sizing:border-box}body{margin:0;background:var(--paper);color:var(--ink);font-family:system-ui,-apple-system,"Malgun Gothic",sans-serif;line-height:1.5}
+header{background:#fff;border-bottom:1px solid var(--line);padding:22px 18px;text-align:center}header h1{margin:0;font-size:clamp(24px,4vw,34px)}header p{margin:6px 0 0;color:var(--muted)}
+main{max-width:1080px;margin:22px auto;padding:0 16px 40px}.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}.tab{border:1px solid var(--line);background:#fff;color:var(--ink)}.tab.active{background:var(--blue);color:#fff;border-color:var(--blue)}
+.panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:clamp(16px,3vw,26px);margin-bottom:16px;box-shadow:0 5px 18px #22334a0a}.hidden{display:none!important}
+h2{font-size:22px;margin:0 0 8px}h3{font-size:17px;margin:0 0 10px}p{margin:6px 0 12px}.muted{color:var(--muted);font-size:14px}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:16px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}label{font-weight:650}input,select,button{font:inherit}input[type=text],input[type=url],select{width:100%;padding:11px;border:1px solid #bac6d6;border-radius:9px;background:#fff;color:var(--ink)}input[type=file]{max-width:100%}button{border:0;border-radius:9px;padding:11px 16px;background:var(--blue);color:white;font-weight:700;cursor:pointer}button.secondary{background:#e9eef7;color:var(--ink)}button:disabled{opacity:.5;cursor:not-allowed}.field{margin:12px 0}.big-result{font-size:clamp(28px,5vw,42px);font-weight:850;letter-spacing:-.03em;margin:6px 0}.result-box{border:1px solid var(--line);background:#f8faff;border-radius:14px;padding:16px;margin-top:14px}.result-box.good{border-color:#9dd7b9;background:#f0fbf5}.result-box.warn{border-color:#f0d28b;background:#fff9e9}.result-box.bad{border-color:#f1b4af;background:#fff5f4}
+.preview{display:block;width:100%;max-width:520px;max-height:440px;object-fit:contain;background:#f8fafc;border:1px solid var(--line);border-radius:12px;margin:10px auto}.canvas-wrap{max-width:520px;margin:auto}.canvas-wrap canvas{width:100%;height:auto;display:block;touch-action:none;border:2px dashed #b5c2d4;border-radius:12px;background:#fff;cursor:crosshair}
+.bar-row{display:grid;grid-template-columns:90px 1fr 55px;gap:10px;align-items:center;margin:10px 0}.bar-bg{height:16px;background:#e9edf4;border-radius:99px;overflow:hidden}.bar-fill{height:100%;background:#5278d7;width:0;transition:width .2s}.pct{text-align:right;font-weight:750;font-variant-numeric:tabular-nums}
+.rule-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:12px}.rule{padding:12px;border:1px solid var(--line);border-radius:12px}.rule strong{display:block;font-size:18px}.rule small{color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:10px;border-bottom:1px solid var(--line);text-align:left}th{background:#f5f7fb}td.center,th.center{text-align:center}.table-wrap{overflow-x:auto}.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin:14px 0}.stat{background:#f7f9fc;border:1px solid var(--line);padding:13px;border-radius:12px}.stat b{display:block;font-size:25px}.notice{border-left:4px solid #d9a441;padding:10px 12px;background:#fff9eb;border-radius:6px;font-size:14px}.gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}.mistake{border:1px solid var(--line);padding:10px;border-radius:12px}.mistake img{width:100%;height:140px;object-fit:contain;background:#f7f9fc;border-radius:8px}.pill{display:inline-block;padding:4px 9px;background:var(--blue2);color:#2447a2;border-radius:99px;font-size:12px;font-weight:750}
+footer{text-align:center;color:var(--muted);font-size:13px;padding:10px 18px 30px}
+@media(max-width:560px){.bar-row{grid-template-columns:76px 1fr 45px;gap:6px}th,td{padding:8px}.panel{border-radius:12px}}
+</style>
 </head>
 <body>
-
-<div class="container">
-    <h1>📐 초등 수학 각도 판별기 (교사용)</h1>
-    <p class="desc">학생들이 그린 각도를 실시간으로 예각, 직각, 둔각으로 분류합니다.</p>
-
-    <div class="control-panel">
-        <p style="margin-top: 0; font-weight: bold; color: #2c3e50;">🔗 Teachable Machine 모델 연결</p>
-        <input type="text" id="model-url" placeholder="Teachable Machine에서 내보낸 URL을 입력하세요 (예: https://teachablemachine.withgoogle.com/models/...)">
-        <button type="button" onclick="init()">모델 시작하기</button>
-    </div>
-
-    <div id="webcam-container">
-        <p style="color: #7f8c8d; margin: 50px;">이곳에 웹캠 화면이 표시됩니다.</p>
-    </div>
-    <div id="label-container"></div>
+<header><h1>📐 각도 탐험대</h1><p>내가 분류한 각을 확인하고, AI가 헷갈린 각도도 함께 살펴봐요.</p></header>
+<main>
+<div class="tabs" role="tablist"><button class="tab active" data-tab="student">학생용 · 각도 확인</button><button class="tab" data-tab="teacher">교사용 · 결과 분석</button></div>
+<section id="model-panel" class="panel">
+<h2>모델 연결</h2><p class="muted">저장소에 있는 학습 모델을 불러옵니다. 이미지 분석은 이 브라우저 안에서 실행되며 사진을 별도 서버로 전송하지 않습니다.</p>
+<div class="row"><div style="flex:1;min-width:230px"><label for="model-url">모델 폴더 주소</label><input id="model-url" type="url" autocomplete="url"></div><button id="load-model">모델 불러오기</button></div><p id="model-status" class="muted" role="status">모델을 불러오는 중입니다.</p>
+</section>
+<section id="student-panel">
+<div class="panel"><h2>1. 각을 보여 주세요</h2><p class="muted">웹캠으로 비추거나, 사진을 올리거나, 아래 칸에 직접 그릴 수 있어요. 두 반직선이 한 점에서 만나도록 그려 보세요.</p>
+<div class="grid">
+<div><h3>📷 웹캠으로 확인</h3><video id="video" class="preview" autoplay playsinline muted></video><div class="row"><button id="camera-start">카메라 켜기</button><button id="camera-snap" class="secondary" disabled>현재 화면 분석</button><button id="camera-stop" class="secondary" disabled>카메라 끄기</button></div><p class="muted">카메라는 버튼을 눌렀을 때만 켜집니다. 브라우저에서 카메라 권한을 허용해 주세요.</p></div>
+<div><h3>🖼️ 사진 올리기</h3><input id="image-file" type="file" accept="image/*"><img id="image-preview" class="preview hidden" alt="선택한 각도 사진 미리보기"><button id="image-analyze" class="secondary" disabled>사진 속 각 분석</button><p class="muted">개인정보가 포함되지 않은 각도 사진을 사용해 주세요.</p></div>
 </div>
-
-<!-- TensorFlow.js & Teachable Machine 라이브러리 -->
+<div class="field"><h3>✏️ 화면에 직접 그리기</h3><div class="canvas-wrap"><canvas id="draw-canvas" width="520" height="340" aria-label="각도를 그리는 공간"></canvas></div><div class="row" style="margin-top:10px"><button id="draw-clear" class="secondary">다시 그리기</button><button id="draw-analyze">그린 각 분석</button></div></div>
+<div id="result" class="result-box"><div class="muted">분석 결과가 여기에 표시됩니다.</div><div class="big-result">준비됐나요?</div><p>각도를 보여 주고 분석 버튼을 눌러 보세요.</p></div>
+<div id="probabilities"></div>
+</div>
+<div class="panel"><h2>2. 각의 약속 확인하기</h2><p>각의 크기를 기준으로 분류해요. 그림의 방향이 기울어져 있어도 각의 크기는 같아요.</p>
+<div class="rule-grid"><div class="rule"><strong>예각</strong><small>0°보다 크고 90°보다 작아요.</small></div><div class="rule"><strong>직각</strong><small>정확히 90°예요.</small></div><div class="rule"><strong>둔각</strong><small>90°보다 크고 180°보다 작아요.</small></div><div class="rule"><strong>각이 아님</strong><small>두 반직선이 한 점에서 만나지 않거나, 곡선 등 각의 모양이 아니에요.</small></div></div>
+<p class="notice">AI의 답은 참고 자료예요. 특히 90°에 가까운 각은 틀릴 수 있어요. 각도기를 사용해 직접 확인하고, AI의 판단과 다르면 선이 분명하게 보이는지 살펴보세요.</p>
+</div>
+</section>
+<section id="teacher-panel" class="hidden">
+<div class="panel"><h2>교사용 결과 분석</h2><p class="muted">정답 종류를 지정한 사진을 여러 장 올리면 종류별 정답률과 AI가 헷갈린 각도를 확인할 수 있습니다. 테스트 사진은 브라우저 안에서만 분석됩니다.</p>
+<div class="field"><label for="batch-files">테스트 사진 여러 장 선택</label><input id="batch-files" type="file" accept="image/*" multiple></div>
+<div id="batch-labels" class="field"><label>사진별 실제 정답을 선택하세요</label><p class="muted">파일을 선택하면 사진마다 실제 정답 선택 칸이 나타납니다.</p></div>
+<div class="row"><button id="run-batch">선택한 사진 분석하기</button><button id="export-csv" class="secondary" disabled>CSV 내려받기</button><button id="clear-batch" class="secondary">테스트 초기화</button></div><p id="batch-status" class="muted" role="status"></p>
+<div id="teacher-results" class="hidden"><div class="stats"><div class="stat"><span class="muted">분석한 사진</span><b id="stat-total">0</b></div><div class="stat"><span class="muted">전체 정답률</span><b id="stat-accuracy">—</b></div><div class="stat"><span class="muted">AI가 헷갈린 각도</span><b id="stat-mistakes">0</b></div><div class="stat"><span class="muted">확신이 낮은 사진</span><b id="stat-low">0</b></div></div>
+<h3>각도 종류별 정답률</h3><div class="table-wrap"><table><thead><tr><th>실제 정답</th><th class="center">검사 수</th><th class="center">맞힌 수</th><th class="center">정답률</th></tr></thead><tbody id="class-accuracy"></tbody></table></div>
+<h3 style="margin-top:22px">각도 분류 결과 비교표</h3><p class="muted">행은 실제 정답, 열은 AI의 예측입니다. 대각선 칸은 맞힌 수입니다.</p><div class="table-wrap"><table id="confusion-table"></table></div>
+<h3 style="margin-top:22px">AI가 헷갈린 각도</h3><div id="mistake-gallery" class="gallery"></div></div>
+</div>
+<div class="panel"><h3>수업에서 활용할 점</h3><ul><li>화면을 회전하거나 기울여도 같은 각으로 분류하는지 확인해 보세요.</li><li>80°부터 100°까지 1°씩 다른 각은 특히 주의 깊게 살펴보세요.</li><li>AI가 90° 근처에서 헷갈리면 각도기로 확인하고, 결과를 정답으로 단정하지 마세요.</li><li>분류 결과는 모델과 촬영 환경에 따라 달라질 수 있으며, 아래 정답률은 선택한 테스트 사진에 대한 결과입니다.</li></ul></div>
+</section>
+</main><footer>초등 수학 1학기 2단원 · 각도 분류는 학습을 돕는 참고 도구입니다.</footer>
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
-
-<script type="text/javascript">
-    let model, webcam, labelContainer, maxPredictions;
-
-    async function init() {
-        const urlInput = document.getElementById("model-url").value;
-        if (!urlInput) {
-            alert("모델 URL을 입력해주세요!");
-            return;
-        }
-
-        // URL 끝에 /가 없으면 추가
-        const URL = urlInput.endsWith("/") ? urlInput : urlInput + "/";
-        const modelURL = URL + "model.json";
-        const metadataURL = URL + "metadata.json";
-
-        try {
-            // 모델 로드
-            model = await tmImage.load(modelURL, metadataURL);
-            maxPredictions = model.getTotalClasses();
-
-            // 웹캠 설정 (너비 400, 높이 400, 좌우 반전 true)
-            const flip = true; 
-            webcam = new tmImage.Webcam(400, 400, flip); 
-            await webcam.setup(); // 웹캠 접근 권한 요청
-            await webcam.play();
-            window.requestAnimationFrame(loop);
-
-            // DOM 요소 정리 및 추가
-            const webcamContainer = document.getElementById("webcam-container");
-            webcamContainer.innerHTML = ""; // 기존 텍스트 지우기
-            webcamContainer.appendChild(webcam.canvas);
-
-            labelContainer = document.getElementById("label-container");
-            labelContainer.innerHTML = ""; // 초기화
-            for (let i = 0; i < maxPredictions; i++) {
-                // 커스텀 프로그레스바 UI 생성
-                const row = document.createElement("div");
-                row.className = "label-row";
-                
-                const nameDiv = document.createElement("div");
-                nameDiv.className = "label-name";
-                
-                const progressBg = document.createElement("div");
-                progressBg.className = "progress-bar-bg";
-                
-                const progressFill = document.createElement("div");
-                progressFill.className = "progress-bar-fill";
-                progressBg.appendChild(progressFill);
-                
-                const percentDiv = document.createElement("div");
-                percentDiv.className = "percent-text";
-
-                row.appendChild(nameDiv);
-                row.appendChild(progressBg);
-                row.appendChild(percentDiv);
-                
-                labelContainer.appendChild(row);
-            }
-        } catch (e) {
-            alert("모델을 불러오는데 실패했습니다. URL을 확인해주세요.");
-            console.error(e);
-        }
-    }
-
-    async function loop() {
-        webcam.update(); // 웹캠 프레임 업데이트
-        await predict();
-        window.requestAnimationFrame(loop);
-    }
-
-    async function predict() {
-        // 예측 실행
-        const prediction = await model.predict(webcam.canvas);
-        for (let i = 0; i < maxPredictions; i++) {
-            const classPredictionName = prediction[i].className;
-            const probability = (prediction[i].probability * 100).toFixed(0);
-
-            const row = labelContainer.childNodes[i];
-            const nameDiv = row.querySelector('.label-name');
-            const progressFill = row.querySelector('.progress-bar-fill');
-            const percentDiv = row.querySelector('.percent-text');
-
-            nameDiv.innerHTML = classPredictionName;
-            percentDiv.innerHTML = probability + "%";
-            progressFill.style.width = probability + "%";
-
-            // 확률에 따른 색상 변화 (높을수록 진하게)
-            if (prediction[i].probability > 0.8) {
-                progressFill.style.backgroundColor = "#e74c3c"; // 높은 확률일 때 강조색 (빨간색)
-                row.style.borderColor = "#e74c3c";
-            } else {
-                progressFill.style.backgroundColor = "#3498db"; // 기본 파란색
-                row.style.borderColor = "#e0e0e0";
-            }
-        }
-    }
+<script>
+const CLASS_NAMES=['예각','직각','둔각','각이 아님'];
+let model=null, stream=null, selectedImage=null, batchFiles=[], batchResults=[];
+const $=id=>document.getElementById(id);
+const canvas=$('draw-canvas'),ctx=canvas.getContext('2d');
+function setStatus(text){$('model-status').textContent=text}
+function drawBlank(){ctx.fillStyle='#fff';ctx.fillRect(0,0,canvas.width,canvas.height);ctx.fillStyle='#8a96a8';ctx.font='16px sans-serif';ctx.textAlign='center';ctx.fillText('여기에 각을 그려 보세요',canvas.width/2,canvas.height-22);ctx.textAlign='start'}
+drawBlank();
+$('model-url').value=new URL('./',location.href).href;
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.toggle('active',x===b));$('student-panel').classList.toggle('hidden',b.dataset.tab!=='student');$('teacher-panel').classList.toggle('hidden',b.dataset.tab!=='teacher')}));
+async function loadModel(){const raw=$('model-url').value.trim();if(!raw){setStatus('모델 폴더 주소를 입력해 주세요.');return}let base=raw.endsWith('/')?raw:raw+'/';setStatus('모델을 불러오는 중입니다…');$('load-model').disabled=true;try{model=await tmImage.load(base+'model.json',base+'metadata.json');setStatus('모델을 불러왔어요. '+model.getTotalClasses()+'개 종류를 분류할 수 있습니다.');$('camera-start').disabled=false;$('image-analyze').disabled=!selectedImage;$('draw-analyze').disabled=false;$('run-batch').disabled=false}catch(e){console.error(e);model=null;setStatus('모델을 불러오지 못했어요. 모델 주소와 model.json, metadata.json, weights.bin 파일을 확인해 주세요.')}finally{$('load-model').disabled=false}}
+$('load-model').addEventListener('click',loadModel);
+async function predictSource(source){if(!model){setStatus('먼저 모델을 불러와 주세요.');return null}try{const preds=await model.predict(source);return preds.map(p=>({label:p.className,prob:p.probability})).sort((a,b)=>b.prob-a.prob)}catch(e){console.error(e);setStatus('분석에 실패했어요. 사진을 다시 선택해 주세요.');return null}}
+function feedback(label,confidence){if(confidence<.7)return {title:'잘 모르겠습니다.',detail:'각이 명확하게 보이도록 다시 비춰주세요. 선을 더 진하게 그리고 배경을 단순하게 해 보세요.',kind:'warn'};let detail='AI의 답을 각의 약속과 비교해 보세요.';if(label==='예각')detail='90°보다 작은 각인지 확인해 보세요.';else if(label==='직각')detail='두 변이 수직으로 만나 90°인지 각도기로 확인해 보세요.';else if(label==='둔각')detail='90°보다 크고 180°보다 작은지 확인해 보세요.';else if(label==='각이 아님')detail='두 반직선이 한 점에서 만나는지, 선이 곧은지 확인해 보세요.';return {title:label,detail,kind:confidence<.85?'warn':'good'}}
+function showPrediction(preds){if(!preds)return;const best=preds[0],fb=feedback(best.label,best.prob);$('result').className='result-box '+fb.kind;$('result').innerHTML='<span class="pill">AI 분석 결과</span><div class="big-result"></div><p class="feedback-text"></p><p class="muted"></p>';$('result').querySelector('.big-result').textContent=fb.title;$('result').querySelector('.feedback-text').textContent=fb.detail;$('result').querySelector('.muted').textContent='가장 높은 예측 확률: '+Math.round(best.prob*100)+'% · AI의 결과가 항상 정확한 것은 아니에요.';const host=$('probabilities');host.innerHTML='<h3>종류별 예측 확률</h3>';preds.forEach(p=>{const row=document.createElement('div');row.className='bar-row';const name=document.createElement('strong');name.textContent=p.label;const bg=document.createElement('div');bg.className='bar-bg';const fill=document.createElement('div');fill.className='bar-fill';fill.style.width=(p.prob*100)+'%';bg.appendChild(fill);const pct=document.createElement('div');pct.className='pct';pct.textContent=Math.round(p.prob*100)+'%';row.append(name,bg,pct);host.appendChild(row)})}
+$('camera-start').addEventListener('click',async()=>{try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'},audio:false});$('video').srcObject=stream;$('camera-snap').disabled=false;$('camera-stop').disabled=false;$('camera-start').disabled=true}catch(e){alert('카메라를 켤 수 없어요. 브라우저 권한을 확인해 주세요.')}});
+$('camera-stop').addEventListener('click',()=>{if(stream)stream.getTracks().forEach(t=>t.stop());stream=null;$('video').srcObject=null;$('camera-snap').disabled=true;$('camera-stop').disabled=true;$('camera-start').disabled=false});
+$('camera-snap').addEventListener('click',async()=>{const v=$('video');if(v.videoWidth===0)return;const c=document.createElement('canvas');c.width=v.videoWidth;c.height=v.videoHeight;c.getContext('2d').drawImage(v,0,0);showPrediction(await predictSource(c))});
+$('image-file').addEventListener('change',e=>{const file=e.target.files[0];if(!file)return;const url=URL.createObjectURL(file);$('image-preview').src=url;$('image-preview').classList.remove('hidden');selectedImage=$('image-preview');$('image-analyze').disabled=!model});
+$('image-analyze').addEventListener('click',async()=>showPrediction(await predictSource(selectedImage)));
+let drawing=false,hasDrawing=false;
+function point(e){const r=canvas.getBoundingClientRect();return {x:(e.clientX-r.left)*canvas.width/r.width,y:(e.clientY-r.top)*canvas.height/r.height}}
+canvas.addEventListener('pointerdown',e=>{drawing=true;hasDrawing=true;canvas.setPointerCapture(e.pointerId);const p=point(e);ctx.beginPath();ctx.moveTo(p.x,p.y);ctx.strokeStyle='#182c52';ctx.lineWidth=7;ctx.lineCap='round';ctx.lineJoin='round'});
+canvas.addEventListener('pointermove',e=>{if(!drawing)return;const p=point(e);ctx.lineTo(p.x,p.y);ctx.stroke()});
+function stopDraw(){drawing=false}canvas.addEventListener('pointerup',stopDraw);canvas.addEventListener('pointercancel',stopDraw);
+$('draw-clear').addEventListener('click',()=>{hasDrawing=false;drawBlank()});
+$('draw-analyze').addEventListener('click',async()=>{if(!hasDrawing){alert('먼저 화면에 각을 그려 주세요.');return}showPrediction(await predictSource(canvas))});
+$('batch-files').addEventListener('change',e=>{batchFiles=Array.from(e.target.files||[]);batchResults=[];$('export-csv').disabled=true;$('teacher-results').classList.add('hidden');const host=$('batch-labels');host.innerHTML='<label>사진별 실제 정답을 선택하세요</label>';if(!batchFiles.length){host.insertAdjacentHTML('beforeend','<p class="muted">선택된 사진이 없습니다.</p>');return}batchFiles.forEach((f,i)=>{const row=document.createElement('div');row.className='row';row.style.margin='10px 0';const name=document.createElement('span');name.textContent=f.name;name.style.flex='1';name.style.minWidth='140px';const sel=document.createElement('select');sel.dataset.index=i;sel.setAttribute('aria-label',f.name+' 실제 정답');sel.style.maxWidth='180px';sel.innerHTML='<option value="">실제 정답 선택</option>'+CLASS_NAMES.map(n=>'<option>'+n+'</option>').join('');row.append(name,sel);host.appendChild(row)})});
+$('run-batch').addEventListener('click',async()=>{if(!model){alert('먼저 모델을 불러와 주세요.');return}if(!batchFiles.length){alert('테스트 사진을 먼저 선택해 주세요.');return}const sels=Array.from($('batch-labels').querySelectorAll('select'));if(sels.some(s=>!s.value)){alert('모든 사진의 실제 정답을 선택해 주세요.');return}batchResults=[];$('run-batch').disabled=true;for(let i=0;i<batchFiles.length;i++){const file=batchFiles[i];$('batch-status').textContent='사진 분석 중… ('+(i+1)+'/'+batchFiles.length+')';try{const img=await loadImage(file);const preds=await predictSource(img);if(preds)batchResults.push({file,actual:sels[i].value,predicted:preds[0].label,confidence:preds[0].prob,probabilities:preds})}catch(e){console.error(e)}}$('run-batch').disabled=false;$('batch-status').textContent=batchResults.length+'장의 분석을 마쳤어요.';renderTeacherResults()});
+function loadImage(file){return new Promise((resolve,reject)=>{const img=new Image();const url=URL.createObjectURL(file);img.onload=()=>{URL.revokeObjectURL(url);resolve(img)};img.onerror=()=>{URL.revokeObjectURL(url);reject(new Error('image load failed'))};img.src=url})}
+function renderTeacherResults(){if(!batchResults.length)return;$('teacher-results').classList.remove('hidden');const total=batchResults.length,mistakes=batchResults.filter(r=>r.actual!==r.predicted);$('stat-total').textContent=total;$('stat-accuracy').textContent=Math.round((total-mistakes.length)/total*100)+'%';$('stat-mistakes').textContent=mistakes.length;$('stat-low').textContent=batchResults.filter(r=>r.confidence<.7).length;
+$('class-accuracy').innerHTML='';CLASS_NAMES.forEach(label=>{const rs=batchResults.filter(r=>r.actual===label),correct=rs.filter(r=>r.predicted===label).length;const tr=document.createElement('tr');[label,rs.length,correct,rs.length?Math.round(correct/rs.length*100)+'%':'—'].forEach((v,i)=>{const td=document.createElement('td');td.textContent=v;if(i>0)td.className='center';tr.appendChild(td)});$('class-accuracy').appendChild(tr)});
+const table=$('confusion-table');table.innerHTML='';const head=document.createElement('tr');['실제 정답 ↓ / AI 예측 →',...CLASS_NAMES].forEach((v,i)=>{const th=document.createElement('th');th.textContent=v;if(i>0)th.className='center';head.appendChild(th)});table.appendChild(head);CLASS_NAMES.forEach(actual=>{const tr=document.createElement('tr');const th=document.createElement('th');th.textContent=actual;tr.appendChild(th);CLASS_NAMES.forEach(pred=>{const td=document.createElement('td');td.textContent=batchResults.filter(r=>r.actual===actual&&r.predicted===pred).length;td.className='center';if(actual===pred)td.style.fontWeight='800';tr.appendChild(td)});table.appendChild(tr)});
+const gallery=$('mistake-gallery');gallery.innerHTML='';if(!mistakes.length)gallery.textContent='이번 테스트에서는 오분류가 없었어요. 다른 사진에서도 확인해 보세요.';mistakes.forEach(r=>{const card=document.createElement('div');card.className='mistake';const img=document.createElement('img');img.alt='오분류 테스트 이미지';img.src=URL.createObjectURL(r.file);const title=document.createElement('strong');title.textContent=r.file.name;const desc=document.createElement('p');desc.textContent='실제: '+r.actual+' · AI: '+r.predicted+' ('+Math.round(r.confidence*100)+'%)';card.append(img,title,desc);gallery.appendChild(card)});$('export-csv').disabled=false}
+$('export-csv').addEventListener('click',()=>{if(!batchResults.length)return;const rows=[['파일명','실제 정답','AI 예측','예측 확률(%)','정답 여부'],...batchResults.map(r=>[r.file.name,r.actual,r.predicted,(r.confidence*100).toFixed(1),r.actual===r.predicted?'정답':'오답'])];const csv='\uFEFF'+rows.map(row=>row.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));a.download='각도_분류_테스트_결과.csv';a.click();URL.revokeObjectURL(a.href)});
+$('clear-batch').addEventListener('click',()=>{$('batch-files').value='';batchFiles=[];batchResults=[];$('batch-labels').innerHTML='<label>사진별 실제 정답을 선택하세요</label><p class="muted">파일을 선택하면 사진마다 실제 정답 선택 칸이 나타납니다.</p>';$('teacher-results').classList.add('hidden');$('export-csv').disabled=true;$('batch-status').textContent='테스트를 초기화했어요.'});
+$('camera-start').disabled=true;$('draw-analyze').disabled=true;$('run-batch').disabled=true;
+loadModel();
 </script>
-
 </body>
 </html>
