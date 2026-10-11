@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>각도 판별기 - 교사용 화면</title>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: #f4f7f6;
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+        }
+        h1 {
+            color: #2c3e50;
+            margin-bottom: 5px;
+        }
+        p.desc {
+            color: #7f8c8d;
+            margin-bottom: 20px;
+        }
+        .control-panel {
+            background-color: #eaf2f8;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        input[type="text"] {
+            width: 70%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        button {
+            padding: 10px 20px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        #webcam-container {
+            margin: 20px auto;
+            border: 4px dashed #bdc3c7;
+            border-radius: 8px;
+            padding: 10px;
+            display: inline-block;
+            background-color: #ecf0f1;
+        }
+        #webcam-container canvas {
+            border-radius: 4px;
+        }
+        #label-container {
+            margin-top: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .label-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background-color: #fff;
+            border: 1px solid #e0e0e0;
+            padding: 10px 15px;
+            border-radius: 6px;
+        }
+        .label-name {
+            font-weight: bold;
+            font-size: 18px;
+            width: 120px;
+            text-align: left;
+        }
+        .progress-bar-bg {
+            flex-grow: 1;
+            background-color: #ecf0f1;
+            border-radius: 10px;
+            height: 20px;
+            margin: 0 15px;
+            overflow: hidden;
+            position: relative;
+        }
+        .progress-bar-fill {
+            background-color: #2ecc71;
+            height: 100%;
+            width: 0%;
+            transition: width 0.1s;
+        }
+        .percent-text {
+            font-size: 16px;
+            font-weight: bold;
+            width: 60px;
+            text-align: right;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>📐 초등 수학 각도 판별기 (교사용)</h1>
+    <p class="desc">학생들이 그린 각도를 실시간으로 예각, 직각, 둔각으로 분류합니다.</p>
+
+    <div class="control-panel">
+        <p style="margin-top: 0; font-weight: bold; color: #2c3e50;">🔗 Teachable Machine 모델 연결</p>
+        <input type="text" id="model-url" placeholder="Teachable Machine에서 내보낸 URL을 입력하세요 (예: https://teachablemachine.withgoogle.com/models/...)">
+        <button type="button" onclick="init()">모델 시작하기</button>
+    </div>
+
+    <div id="webcam-container">
+        <p style="color: #7f8c8d; margin: 50px;">이곳에 웹캠 화면이 표시됩니다.</p>
+    </div>
+    <div id="label-container"></div>
+</div>
+
+<!-- TensorFlow.js & Teachable Machine 라이브러리 -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+
+<script type="text/javascript">
+    let model, webcam, labelContainer, maxPredictions;
+
+    async function init() {
+        const urlInput = document.getElementById("model-url").value;
+        if (!urlInput) {
+            alert("모델 URL을 입력해주세요!");
+            return;
+        }
+
+        // URL 끝에 /가 없으면 추가
+        const URL = urlInput.endsWith("/") ? urlInput : urlInput + "/";
+        const modelURL = URL + "model.json";
+        const metadataURL = URL + "metadata.json";
+
+        try {
+            // 모델 로드
+            model = await tmImage.load(modelURL, metadataURL);
+            maxPredictions = model.getTotalClasses();
+
+            // 웹캠 설정 (너비 400, 높이 400, 좌우 반전 true)
+            const flip = true; 
+            webcam = new tmImage.Webcam(400, 400, flip); 
+            await webcam.setup(); // 웹캠 접근 권한 요청
+            await webcam.play();
+            window.requestAnimationFrame(loop);
+
+            // DOM 요소 정리 및 추가
+            const webcamContainer = document.getElementById("webcam-container");
+            webcamContainer.innerHTML = ""; // 기존 텍스트 지우기
+            webcamContainer.appendChild(webcam.canvas);
+
+            labelContainer = document.getElementById("label-container");
+            labelContainer.innerHTML = ""; // 초기화
+            for (let i = 0; i < maxPredictions; i++) {
+                // 커스텀 프로그레스바 UI 생성
+                const row = document.createElement("div");
+                row.className = "label-row";
+                
+                const nameDiv = document.createElement("div");
+                nameDiv.className = "label-name";
+                
+                const progressBg = document.createElement("div");
+                progressBg.className = "progress-bar-bg";
+                
+                const progressFill = document.createElement("div");
+                progressFill.className = "progress-bar-fill";
+                progressBg.appendChild(progressFill);
+                
+                const percentDiv = document.createElement("div");
+                percentDiv.className = "percent-text";
+
+                row.appendChild(nameDiv);
+                row.appendChild(progressBg);
+                row.appendChild(percentDiv);
+                
+                labelContainer.appendChild(row);
+            }
+        } catch (e) {
+            alert("모델을 불러오는데 실패했습니다. URL을 확인해주세요.");
+            console.error(e);
+        }
+    }
+
+    async function loop() {
+        webcam.update(); // 웹캠 프레임 업데이트
+        await predict();
+        window.requestAnimationFrame(loop);
+    }
+
+    async function predict() {
+        // 예측 실행
+        const prediction = await model.predict(webcam.canvas);
+        for (let i = 0; i < maxPredictions; i++) {
+            const classPredictionName = prediction[i].className;
+            const probability = (prediction[i].probability * 100).toFixed(0);
+
+            const row = labelContainer.childNodes[i];
+            const nameDiv = row.querySelector('.label-name');
+            const progressFill = row.querySelector('.progress-bar-fill');
+            const percentDiv = row.querySelector('.percent-text');
+
+            nameDiv.innerHTML = classPredictionName;
+            percentDiv.innerHTML = probability + "%";
+            progressFill.style.width = probability + "%";
+
+            // 확률에 따른 색상 변화 (높을수록 진하게)
+            if (prediction[i].probability > 0.8) {
+                progressFill.style.backgroundColor = "#e74c3c"; // 높은 확률일 때 강조색 (빨간색)
+                row.style.borderColor = "#e74c3c";
+            } else {
+                progressFill.style.backgroundColor = "#3498db"; // 기본 파란색
+                row.style.borderColor = "#e0e0e0";
+            }
+        }
+    }
+</script>
+
+</body>
+</html>
