@@ -305,32 +305,70 @@ renderSpecial();
  let files=[];
  input.onchange=e=>{files=[...e.target.files];count.textContent='선택한 사진 '+files.length+'장';};
  const load=file=>new Promise((res,rej)=>{let i=new Image();i.onload=()=>res(i);i.onerror=rej;i.src=URL.createObjectURL(file)});
+ // 실제 클래스/예측 클래스(영어·한국어)를 하나의 한국어 표준 키로 맞춥니다.
+ function normalizeClassName(raw){
+  if(raw==null) return null;
+  const key=String(raw).trim().toLowerCase().replace(/\s+/g,' ').replace(/_/g,' ');
+  const compact=key.replace(/\s+/g,'');
+  if(key==='acute angle'||key==='acute'||compact==='예각') return '예각';
+  if(key==='right angle'||key==='right'||compact==='직각') return '직각';
+  if(key==='obtuse angle'||key==='obtuse'||compact==='둔각') return '둔각';
+  if(
+    key==='not angle'||
+    key==='no angle'||
+    key==='none'||
+    key==='angle is not'||
+    compact==='각이아님'||
+    compact==='아님'
+  ) return '각이 아님';
+  return null;
+ }
  function actualFromName(name){
-   if(name.includes('예각')||/^acute/i.test(name)) return '예각';
-   if(name.includes('직각')||/^right/i.test(name)) return '직각';
-   if(name.includes('둔각')||/^obtuse/i.test(name)) return '둔각';
-   if(name.includes('각이아님')||name.includes('아님')||/^none/i.test(name)) return '각이 아님';
-   return null;
+   // 파일명 규칙: 확장자 제거 후 첫 번째 "_" 앞부분을 실제 클래스로 읽습니다.
+   const withoutExt=String(name||'').replace(/\.[^.]+$/,'');
+   const prefix=withoutExt.split('_')[0].trim();
+   return normalizeClassName(prefix) || '미확인';
  }
  button.onclick=async()=>{
   if(!files.length)return alert('테스트 사진을 넣어주세요.');
   let results=[];
+  const metadataLabels=typeof model?.getClassLabels==='function'?model.getClassLabels().map(normalizeClassName).filter(Boolean):[];
   for(const f of files){
    const pred=await predictSource(await load(f));
-   if(pred&&pred[0]) results.push({file:f,actual:actualFromName(f.name),predicted:pred[0].label,confidence:pred[0].prob});
+   if(pred&&pred[0]){
+     const predictedNormalized=normalizeClassName(pred[0].label) || '미확인';
+     results.push({file:f,actual:actualFromName(f.name),predicted:predictedNormalized,predictedRaw:pred[0].label,confidence:pred[0].prob});
+   }
   }
-  const valid=results.filter(r=>r.actual);
-  const correct=valid.filter(r=>r.actual===r.predicted).length;
-  const rate=valid.length?Math.round(correct/valid.length*100):0;
+  const evaluable=results.filter(r=>labels.includes(r.actual));
+  const unknownActual=results.filter(r=>r.actual==='미확인');
+  const correct=evaluable.filter(r=>r.actual===r.predicted).length;
+  const rate=evaluable.length?Math.round(correct/evaluable.length*100):0;
   const stat={}; labels.forEach(l=>stat[l]={n:0,c:0});
-  valid.forEach(r=>{stat[r.actual].n++; if(r.actual===r.predicted)stat[r.actual].c++});
-  accuracyBox.innerHTML='<div style="font-size:36px;font-weight:800;color:#2857c5">전체 정확도 '+rate+'%</div><p>정답 '+correct+' / '+valid.length+'장</p>'+
-    labels.map(l=>{let p=stat[l].n?Math.round(stat[l].c/stat[l].n*100):0;return `<div class="bar-row"><div>${l}</div><div class="bar-bg"><div class="bar-fill" style="width:${p}%"></div></div><div class="pct">${p}%</div></div>`}).join('');
+  evaluable.forEach(r=>{stat[r.actual].n++; if(r.actual===r.predicted)stat[r.actual].c++});
+  const metadataHint=metadataLabels.length?'<p class="muted">모델 metadata 클래스(표준화): '+Array.from(new Set(metadataLabels)).join(', ')+'</p>':'';
+  const unknownHint=unknownActual.length
+    ?'<p class="notice">실제 클래스를 파일명에서 찾지 못한 사진 '+unknownActual.length+'장: 파일명은 "acute angle_01.png"처럼 "클래스명_번호" 형식을 권장합니다.</p>'
+    :'';
+  accuracyBox.innerHTML='<div style="font-size:36px;font-weight:800;color:#2857c5">전체 정확도 '+rate+'%</div><p>정답 '+correct+' / '+evaluable.length+'장</p>'+
+   '<p class="muted">정확도 집계 대상 '+evaluable.length+'장 / 전체 선택 '+results.length+'장</p>'+
+   labels.map(l=>{let p=stat[l].n?Math.round(stat[l].c/stat[l].n*100):0;return `<div class="bar-row"><div>${l}</div><div class="bar-bg"><div class="bar-fill" style="width:${p}%"></div></div><div class="pct">${p}%</div></div>`}).join('')+
+   unknownHint+metadataHint;
   let html='<table><tr><th>실제 ↓ / 예측 →</th>'+labels.map(l=>'<th>'+l+'</th>').join('')+'</tr>';
-  labels.forEach(a=>{html+='<tr><th>'+a+'</th>'+labels.map(b=>'<td class="center">'+valid.filter(r=>r.actual===a&&r.predicted===b).length+'</td>').join('')+'</tr>'});
+  labels.forEach(a=>{html+='<tr><th>'+a+'</th>'+labels.map(b=>'<td class="center">'+evaluable.filter(r=>r.actual===a&&r.predicted===b).length+'</td>').join('')+'</tr>'});
   matrixBox.innerHTML=html+'</table>';
   wrongBox.innerHTML='';
-  results.filter(r=>r.actual&&r.actual!==r.predicted).slice(0,8).forEach(r=>{let d=document.createElement('div');d.className='mistake';d.innerHTML='<b>'+r.file.name+'</b><br>실제: '+r.actual+' → AI: '+r.predicted+' ('+Math.round(r.confidence*100)+'%)';wrongBox.appendChild(d)});
+  results
+    .filter(r=>r.actual==='미확인'||r.actual!==r.predicted)
+    .slice(0,8)
+    .forEach(r=>{
+      let d=document.createElement('div');
+      d.className='mistake';
+      const predLabel=labels.includes(r.predicted)?r.predicted:`미확인 (${r.predictedRaw})`;
+      const actualLabel=r.actual==='미확인'?'미확인 (파일명 확인 필요)':r.actual;
+      d.innerHTML='<b>'+r.file.name+'</b><br>실제: '+actualLabel+' → AI: '+predLabel+' ('+Math.round(r.confidence*100)+'%)';
+      wrongBox.appendChild(d)
+    });
  };
 })();
 </script>
