@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Teachable Machine 모델 평가</title>
+  <style>
+    :root { color-scheme: light; font-family: system-ui, -apple-system, "Malgun Gothic", sans-serif; }
+    body { margin: 0; background: #f4f7fb; color: #203047; }
+    main { width: min(760px, calc(100% - 32px)); margin: 32px auto; }
+    .card { background: #fff; border: 1px solid #dce4ee; border-radius: 16px; padding: 24px; box-shadow: 0 5px 18px #22334a0a; }
+    h1 { margin: 0 0 8px; }
+    .muted { color: #637187; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin: 16px 0; }
+    button, input[type="file"] { font: inherit; }
+    button { border: 0; border-radius: 10px; padding: 10px 16px; background: #2857c5; color: #fff; cursor: pointer; }
+    button:disabled { background: #aab5c6; cursor: not-allowed; }
+    img { display: block; width: 100%; max-height: 420px; object-fit: contain; margin-top: 16px; border: 1px solid #dce4ee; border-radius: 12px; background: #f8fafc; }
+    .status { margin: 12px 0; padding: 10px 12px; border-radius: 10px; background: #eef3ff; }
+    .prediction { margin-top: 18px; }
+    .prediction-row { display: grid; grid-template-columns: 110px 1fr 64px; gap: 10px; align-items: center; margin: 10px 0; }
+    .bar { height: 14px; overflow: hidden; border-radius: 99px; background: #e9edf4; }
+    .bar > span { display: block; height: 100%; background: #2857c5; }
+    @media (max-width: 520px) { .prediction-row { grid-template-columns: 82px 1fr 54px; gap: 6px; font-size: 14px; } }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="card">
+      <h1>이미지 모델 평가</h1>
+      <p class="muted">같은 폴더의 <code>model.json</code>과 <code>metadata.json</code>을 Teachable Machine 이미지 모델로 불러옵니다.</p>
+
+      <div id="status" class="status">모델을 불러오는 중입니다…</div>
+
+      <div class="row">
+        <input id="image-input" type="file" accept="image/*">
+        <button id="predict-button" type="button" disabled>분석하기</button>
+      </div>
+
+      <img id="preview" alt="분석할 이미지 미리보기" hidden>
+      <div id="prediction" class="prediction" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+  <script>
+    const MODEL_URL = './model.json';
+    const METADATA_URL = './metadata.json';
+
+    const status = document.getElementById('status');
+    const imageInput = document.getElementById('image-input');
+    const predictButton = document.getElementById('predict-button');
+    const preview = document.getElementById('preview');
+    const prediction = document.getElementById('prediction');
+
+    let model = null;
+    let selectedImage = null;
+    let previewUrl = null;
+
+    function setStatus(message, isError = false) {
+      status.textContent = message;
+      status.style.background = isError ? '#fff0ee' : '#eef3ff';
+      status.style.color = isError ? '#b42318' : '';
+    }
+
+    async function loadModel() {
+      try {
+        setStatus('model.json과 metadata.json을 불러오는 중입니다…');
+        model = await tmImage.load(MODEL_URL, METADATA_URL);
+        setStatus(`모델을 불러왔습니다. 클래스 ${model.getTotalClasses()}개`);
+        predictButton.disabled = !selectedImage;
+      } catch (error) {
+        console.error(error);
+        setStatus('모델을 불러오지 못했습니다. eval.html, model.json, metadata.json이 같은 폴더에 있는지 확인하세요.', true);
+      }
+    }
+
+    imageInput.addEventListener('change', event => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      selectedImage = new Image();
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      previewUrl = URL.createObjectURL(file);
+      preview.src = previewUrl;
+      preview.hidden = false;
+      prediction.innerHTML = '';
+      predictButton.disabled = !model;
+      selectedImage.onload = () => setStatus('이미지를 선택했습니다. 분석하기를 눌러 주세요.');
+      selectedImage.src = previewUrl;
+    });
+
+    predictButton.addEventListener('click', async () => {
+      if (!model || !selectedImage) return;
+
+      predictButton.disabled = true;
+      setStatus('이미지를 분석하는 중입니다…');
+      prediction.innerHTML = '';
+
+      try {
+        const results = await model.predict(selectedImage);
+        results.sort((a, b) => b.probability - a.probability);
+        const best = results[0];
+        setStatus(`분석 완료: ${best.className} (${(best.probability * 100).toFixed(1)}%)`);
+
+        prediction.innerHTML = results.map(result => {
+          const percent = result.probability * 100;
+          return `
+            <div class="prediction-row">
+              <strong>${escapeHtml(result.className)}</strong>
+              <div class="bar"><span style="width: ${percent.toFixed(2)}%"></span></div>
+              <span>${percent.toFixed(1)}%</span>
+            </div>`;
+        }).join('');
+      } catch (error) {
+        console.error(error);
+        setStatus('이미지 분석에 실패했습니다.', true);
+      } finally {
+        predictButton.disabled = false;
+      }
+    });
+
+    function escapeHtml(value) {
+      return String(value).replace(/[&<>"']/g, character => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[character]));
+    }
+
+    loadModel();
+  </script>
+</body>
+</html>
