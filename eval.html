@@ -7,17 +7,32 @@
   <style>
     :root { color-scheme: light; font-family: system-ui, -apple-system, "Malgun Gothic", sans-serif; }
     body { margin: 0; background: #f4f7fb; color: #203047; }
-    main { width: min(980px, calc(100% - 32px)); margin: 32px auto; }
-    .card { background: #fff; border: 1px solid #dce4ee; border-radius: 16px; padding: 24px; box-shadow: 0 5px 18px #22334a0a; }
-    h1 { margin: 0 0 8px; }
-    h2 { margin: 0 0 12px; font-size: 20px; }
+    main { width: min(1180px, calc(100% - 32px)); margin: 32px auto; }
+    .card { background: #fff; border: 1px solid #dce4ee; border-radius: 16px; padding: 24px; box-shadow: 0 5px 18px #22334a0a; margin-bottom: 18px; }
+    h1, h2, h3 { margin-top: 0; }
+    h2 { margin-bottom: 12px; font-size: 20px; }
     .muted { color: #637187; }
     .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin: 16px 0; }
     button, input[type="file"] { font: inherit; }
     button { border: 0; border-radius: 10px; padding: 10px 16px; background: #2857c5; color: #fff; cursor: pointer; }
+    button.secondary { background: #637187; }
     button:disabled { background: #aab5c6; cursor: not-allowed; }
     .status { margin: 12px 0; padding: 10px 12px; border-radius: 10px; background: #eef3ff; }
-    .summary { margin: 20px 0; padding: 16px; border-radius: 12px; background: #f5f7fb; }
+    .summary { padding: 16px; border-radius: 12px; background: #f5f7fb; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-top: 14px; }
+    .stat { padding: 14px; border: 1px solid #dce4ee; border-radius: 12px; background: #fff; }
+    .stat strong { display: block; font-size: 24px; margin-top: 4px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 520px; }
+    th, td { padding: 9px 10px; border: 1px solid #dce4ee; text-align: center; white-space: nowrap; }
+    th { background: #f5f7fb; }
+    td.diagonal { background: #e9f8ef; font-weight: 700; }
+    .accuracy-row { display: grid; grid-template-columns: 150px 1fr 68px; gap: 10px; align-items: center; margin: 10px 0; }
+    .bar { height: 14px; overflow: hidden; border-radius: 99px; background: #e9edf4; }
+    .bar > span { display: block; height: 100%; background: #2857c5; }
+    .wrong-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 14px; }
+    .wrong-item { border: 1px solid #f0b3ad; border-radius: 12px; padding: 10px; background: #fff8f7; }
+    .wrong-item img { display: block; width: 100%; height: 140px; object-fit: contain; margin-bottom: 8px; border-radius: 8px; background: #fff; }
     .result-list { display: grid; gap: 16px; }
     .result-card { border: 1px solid #dce4ee; border-radius: 14px; padding: 16px; }
     .result-card.correct { border-color: #9ad5b7; background: #f3fcf7; }
@@ -29,26 +44,47 @@
     .badge.wrong { color: #a42319; background: #ffe0dc; }
     .preview { display: block; width: 180px; height: 140px; object-fit: contain; margin: 14px 0; border: 1px solid #dce4ee; border-radius: 10px; background: #f8fafc; }
     .prediction-row { display: grid; grid-template-columns: 130px 1fr 64px; gap: 10px; align-items: center; margin: 8px 0; }
-    .bar { height: 12px; overflow: hidden; border-radius: 99px; background: #e9edf4; }
-    .bar > span { display: block; height: 100%; background: #2857c5; }
     .actual { color: #637187; }
-    @media (max-width: 520px) { .prediction-row { grid-template-columns: 90px 1fr 54px; gap: 6px; font-size: 14px; } }
+    @media (max-width: 560px) {
+      .accuracy-row, .prediction-row { grid-template-columns: 90px 1fr 54px; gap: 6px; font-size: 14px; }
+      .card { padding: 18px; }
+    }
   </style>
 </head>
 <body>
   <main>
     <section class="card">
       <h1>이미지 모델 평가</h1>
-      <p class="muted">사진을 여러 장 선택하면 각각 예측합니다. 파일 이름에서 첫 번째 밑줄(<code>_</code>) 앞부분을 실제 클래스로 사용합니다. 예: <code>acute angle_01.jpg</code> → <code>acute angle</code></p>
+      <p class="muted">사진은 서버로 전송하지 않고 이 브라우저에서만 분석합니다. 파일 이름의 첫 번째 밑줄 앞부분을 실제 클래스로 사용합니다. 예: <code>acute angle_01.jpg</code> → <code>acute angle</code></p>
 
       <div id="status" class="status">모델을 불러오는 중입니다…</div>
-
       <div class="row">
         <input id="image-input" type="file" accept="image/*" multiple>
         <button id="predict-button" type="button" disabled>전체 사진 분석하기</button>
+        <button id="csv-button" class="secondary" type="button" disabled>CSV 내려받기</button>
       </div>
 
       <div id="summary" class="summary" hidden></div>
+    </section>
+
+    <section id="evaluation-panel" class="card" hidden>
+      <h2>클래스별 정분류율</h2>
+      <div id="accuracy"></div>
+    </section>
+
+    <section id="matrix-panel" class="card" hidden>
+      <h2>혼동행렬</h2>
+      <p class="muted">행은 실제 클래스, 열은 모델 예측 클래스입니다.</p>
+      <div id="matrix" class="table-wrap"></div>
+    </section>
+
+    <section id="wrong-panel" class="card" hidden>
+      <h2>틀린 사진 모음</h2>
+      <div id="wrong-gallery" class="wrong-gallery"></div>
+    </section>
+
+    <section class="card">
+      <h2>사진별 예측 결과</h2>
       <div id="results" class="result-list" aria-live="polite"></div>
     </section>
   </main>
@@ -62,11 +98,16 @@
     const status = document.getElementById('status');
     const imageInput = document.getElementById('image-input');
     const predictButton = document.getElementById('predict-button');
+    const csvButton = document.getElementById('csv-button');
     const summary = document.getElementById('summary');
+    const accuracyBox = document.getElementById('accuracy');
+    const matrixBox = document.getElementById('matrix');
+    const wrongGallery = document.getElementById('wrong-gallery');
     const resultsContainer = document.getElementById('results');
 
     let model = null;
     let selectedFiles = [];
+    let evaluationResults = [];
 
     function setStatus(message, isError = false) {
       status.textContent = message;
@@ -74,6 +115,7 @@
       status.style.color = isError ? '#b42318' : '';
     }
 
+    // Teachable Machine 모델과 메타데이터를 같은 폴더에서 불러옵니다.
     async function loadModel() {
       try {
         setStatus('model.json과 metadata.json을 불러오는 중입니다…');
@@ -88,8 +130,13 @@
 
     imageInput.addEventListener('change', event => {
       selectedFiles = Array.from(event.target.files || []);
+      evaluationResults = [];
       resultsContainer.innerHTML = '';
       summary.hidden = true;
+      document.getElementById('evaluation-panel').hidden = true;
+      document.getElementById('matrix-panel').hidden = true;
+      document.getElementById('wrong-panel').hidden = true;
+      csvButton.disabled = true;
       predictButton.disabled = !model || selectedFiles.length === 0;
 
       if (selectedFiles.length) {
@@ -97,31 +144,36 @@
       }
     });
 
+    // 선택한 모든 사진을 순서대로 브라우저 안에서만 예측합니다.
     predictButton.addEventListener('click', async () => {
       if (!model || !selectedFiles.length) return;
 
       predictButton.disabled = true;
+      csvButton.disabled = true;
       resultsContainer.innerHTML = '';
       summary.hidden = true;
+      evaluationResults = [];
       setStatus(`${selectedFiles.length}장의 사진을 분석하는 중입니다…`);
-
-      const evaluationResults = [];
 
       try {
         for (let index = 0; index < selectedFiles.length; index += 1) {
           const file = selectedFiles[index];
           setStatus(`${index + 1}/${selectedFiles.length}장 분석 중: ${file.name}`);
-          const image = await loadImage(file);
-          const predictions = await model.predict(image);
+          const loaded = await loadImage(file);
+          const predictions = await model.predict(loaded.image);
           predictions.sort((a, b) => b.probability - a.probability);
 
-          const actualClass = getActualClass(file.name);
-          const best = predictions[0];
-          evaluationResults.push({ file, image, predictions, actualClass, best });
+          evaluationResults.push({
+            file,
+            imageUrl: loaded.url,
+            predictions,
+            actualClass: getActualClass(file.name),
+            best: predictions[0]
+          });
         }
 
-        renderResults(evaluationResults);
-        renderSummary(evaluationResults);
+        renderAllResults(evaluationResults);
+        csvButton.disabled = false;
         setStatus(`${evaluationResults.length}장의 사진 분석을 완료했습니다.`);
       } catch (error) {
         console.error(error);
@@ -131,14 +183,12 @@
       }
     });
 
+    // 브라우저가 선택한 파일을 읽어 object URL로만 다룹니다. 외부 업로드는 하지 않습니다.
     function loadImage(file) {
       return new Promise((resolve, reject) => {
         const image = new Image();
         const url = URL.createObjectURL(file);
-        image.onload = () => {
-          URL.revokeObjectURL(url);
-          resolve(image);
-        };
+        image.onload = () => resolve({ image, url });
         image.onerror = () => {
           URL.revokeObjectURL(url);
           reject(new Error(`이미지를 읽을 수 없습니다: ${file.name}`));
@@ -147,28 +197,122 @@
       });
     }
 
+    // 파일 확장자를 제거한 뒤 첫 번째 밑줄 앞부분을 실제 클래스명으로 사용합니다.
     function getActualClass(filename) {
-      // 첫 번째 밑줄 앞부분을 실제 클래스명으로 사용합니다.
-      // 예: "acute angle_01.jpg" -> "acute angle"
-      const nameWithoutExtension = filename.replace(/\\.[^.]+$/, '');
+      const nameWithoutExtension = filename.replace(/\.[^.]+$/, '');
       return nameWithoutExtension.split('_')[0].trim();
     }
 
-    function renderResults(items) {
-      resultsContainer.innerHTML = items.map((item, index) => {
-        const isCorrect = normalize(item.actualClass) === normalize(item.best.className);
-        const percent = item.best.probability * 100;
-        const previewUrl = item.image.src;
+    function normalize(value) {
+      return String(value || '').trim().toLowerCase();
+    }
 
+    function isCorrect(item) {
+      return normalize(item.actualClass) === normalize(item.best.className);
+    }
+
+    function getClasses(items) {
+      // 모델 클래스와 파일명에서 얻은 실제 클래스를 모두 포함해 누락된 행/열을 방지합니다.
+      const classes = new Map();
+      items.forEach(item => {
+        classes.set(normalize(item.actualClass), item.actualClass);
+        classes.set(normalize(item.best.className), item.best.className);
+        item.predictions.forEach(prediction => classes.set(normalize(prediction.className), prediction.className));
+      });
+      return Array.from(classes.values()).filter(Boolean);
+    }
+
+    function renderAllResults(items) {
+      renderSummary(items);
+      renderAccuracy(items);
+      renderConfusionMatrix(items);
+      renderWrongPhotos(items);
+      renderIndividualResults(items);
+    }
+
+    function renderSummary(items) {
+      const correctCount = items.filter(isCorrect).length;
+      const accuracy = items.length ? (correctCount / items.length) * 100 : 0;
+      summary.hidden = false;
+      summary.innerHTML = `
+        <strong>평가 요약</strong>
+        <div class="stats">
+          <div class="stat"><span class="muted">분석 사진</span><strong>${items.length}장</strong></div>
+          <div class="stat"><span class="muted">정답 사진</span><strong>${correctCount}장</strong></div>
+          <div class="stat"><span class="muted">전체 정확도</span><strong>${accuracy.toFixed(1)}%</strong></div>
+        </div>`;
+    }
+
+    // 실제 클래스별로 맞힌 수 / 전체 수를 계산해 정분류율을 표시합니다.
+    function renderAccuracy(items) {
+      const classes = getClasses(items);
+      accuracyBox.innerHTML = classes.map(className => {
+        const actualItems = items.filter(item => normalize(item.actualClass) === normalize(className));
+        const correct = actualItems.filter(item => normalize(item.best.className) === normalize(className)).length;
+        const rate = actualItems.length ? (correct / actualItems.length) * 100 : 0;
         return `
-          <article class="result-card ${isCorrect ? 'correct' : 'wrong'}">
+          <div class="accuracy-row">
+            <strong>${escapeHtml(className)}</strong>
+            <div class="bar"><span style="width: ${rate.toFixed(2)}%"></span></div>
+            <span>${rate.toFixed(1)}%<br><small>${correct}/${actualItems.length}</small></span>
+          </div>`;
+      }).join('') || '<p class="muted">분석 결과가 없습니다.</p>';
+      document.getElementById('evaluation-panel').hidden = false;
+    }
+
+    // 혼동행렬의 행은 실제 클래스, 열은 예측 클래스입니다.
+    function renderConfusionMatrix(items) {
+      const classes = getClasses(items);
+      let html = '<table><thead><tr><th>실제 ↓ / 예측 →</th>';
+      html += classes.map(className => `<th>${escapeHtml(className)}</th>`).join('');
+      html += '</tr></thead><tbody>';
+
+      classes.forEach(actualClass => {
+        html += `<tr><th>${escapeHtml(actualClass)}</th>`;
+        classes.forEach(predictedClass => {
+          const count = items.filter(item =>
+            normalize(item.actualClass) === normalize(actualClass) &&
+            normalize(item.best.className) === normalize(predictedClass)
+          ).length;
+          const diagonal = normalize(actualClass) === normalize(predictedClass) ? ' class="diagonal"' : '';
+          html += `<td${diagonal}>${count}</td>`;
+        });
+        html += '</tr>';
+      });
+
+      matrixBox.innerHTML = html + '</tbody></table>';
+      document.getElementById('matrix-panel').hidden = false;
+    }
+
+    // 오분류된 사진만 모아 미리보기와 실제/예측 클래스를 보여줍니다.
+    function renderWrongPhotos(items) {
+      const wrongItems = items.filter(item => !isCorrect(item));
+      if (!wrongItems.length) {
+        wrongGallery.innerHTML = '<p class="muted">틀린 사진이 없습니다.</p>';
+      } else {
+        wrongGallery.innerHTML = wrongItems.map(item => `
+          <article class="wrong-item">
+            <img src="${escapeAttribute(item.imageUrl)}" alt="${escapeAttribute(item.file.name)}">
+            <strong>${escapeHtml(item.file.name)}</strong>
+            <div>실제: ${escapeHtml(item.actualClass || '(없음)')}</div>
+            <div>예측: ${escapeHtml(item.best.className)} (${(item.best.probability * 100).toFixed(1)}%)</div>
+          </article>`).join('');
+      }
+      document.getElementById('wrong-panel').hidden = false;
+    }
+
+    function renderIndividualResults(items) {
+      resultsContainer.innerHTML = items.map((item, index) => {
+        const correct = isCorrect(item);
+        return `
+          <article class="result-card ${correct ? 'correct' : 'wrong'}">
             <div class="result-head">
               <strong class="filename">${index + 1}. ${escapeHtml(item.file.name)}</strong>
-              <span class="badge ${isCorrect ? 'correct' : 'wrong'}">${isCorrect ? '정답' : '오답'}</span>
+              <span class="badge ${correct ? 'correct' : 'wrong'}">${correct ? '정답' : '오답'}</span>
             </div>
-            <img class="preview" src="${escapeAttribute(previewUrl)}" alt="${escapeAttribute(item.file.name)} 미리보기">
+            <img class="preview" src="${escapeAttribute(item.imageUrl)}" alt="${escapeAttribute(item.file.name)} 미리보기">
             <div class="actual">실제 클래스: <strong>${escapeHtml(item.actualClass || '(없음)')}</strong></div>
-            <div>예측 클래스: <strong>${escapeHtml(item.best.className)}</strong> (${percent.toFixed(1)}%)</div>
+            <div>예측 클래스: <strong>${escapeHtml(item.best.className)}</strong> (${(item.best.probability * 100).toFixed(1)}%)</div>
             <div style="margin-top: 12px;">
               ${item.predictions.map(prediction => {
                 const probability = prediction.probability * 100;
@@ -184,19 +328,36 @@
       }).join('');
     }
 
-    function renderSummary(items) {
-      const correctCount = items.filter(item => normalize(item.actualClass) === normalize(item.best.className)).length;
-      const accuracy = items.length ? (correctCount / items.length) * 100 : 0;
-      summary.hidden = false;
-      summary.innerHTML = `<h2>평가 요약</h2><strong>${correctCount} / ${items.length}장 정답</strong> · 정확도 ${accuracy.toFixed(1)}%`;
-    }
+    // 평가 결과를 CSV로 만들어 다운로드합니다. 데이터는 브라우저에서만 생성됩니다.
+    csvButton.addEventListener('click', () => {
+      if (!evaluationResults.length) return;
+      const rows = [
+        ['파일명', '실제 클래스', '예측 클래스', '예측 확률(%)', '정답 여부'],
+        ...evaluationResults.map(item => [
+          item.file.name,
+          item.actualClass,
+          item.best.className,
+          (item.best.probability * 100).toFixed(2),
+          isCorrect(item) ? '정답' : '오답'
+        ])
+      ];
+      const csv = '\ufeff' + rows.map(row => row.map(csvEscape).join(',')).join('\r\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'model-evaluation-results.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+    });
 
-    function normalize(value) {
-      return String(value || '').trim().toLowerCase();
+    function csvEscape(value) {
+      const text = String(value ?? '');
+      return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
     }
 
     function escapeHtml(value) {
-      return String(value).replace(/[&<>"']/g, character => ({
+      return String(value ?? '').replace(/[&<>"']/g, character => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
       }[character]));
     }
