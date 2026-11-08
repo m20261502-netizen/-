@@ -69,9 +69,9 @@ text-align:center;
 <section id="student-panel" class="hidden">
 <div class="panel">
 <h2>학생용 각도 활동</h2><p class="muted">먼저 활동 방법을 선택하세요. 직접 그릴 때는 마우스나 손가락으로 선을 그어도 화면에는 항상 곧은 선으로 표시됩니다.</p>
-<div class="mode-choice"><label class="mode-card"><input type="radio" name="student-mode" value="compare" checked><span><strong>방법 1. 내가 생각한 답과 AI 비교하기</strong><small>각을 그리거나 카메라로 보여 주고, AI 분석 전에 내가 생각하는 각을 선택해요.</small></span></label><label class="mode-card"><input type="radio" name="student-mode" value="target"><span><strong>방법 2. 목표 각 만들기</strong><small>예각·직각·둔각 중 하나를 선택한 뒤, 그 각을 그리거나 카메라로 보여 주세요.</small></span></label></div>
-<div id="compare-answer-box" class="field"><label for="student-answer">AI 분석 전에 내가 생각하는 각을 선택하세요</label><select id="student-answer"><option value="">내 생각 선택하기</option><option>예각</option><option>직각</option><option>둔각</option><option>각이 아님</option></select></div>
-<div id="target-answer-box" class="field hidden"><label for="target-answer">만들고 싶은 각을 선택하세요</label><select id="target-answer"><option value="">목표 각 선택하기</option><option>예각</option><option>직각</option><option>둔각</option></select><p class="muted">선택한 각에 맞게 두 곧은 선을 한 꼭짓점에서 만나도록 그려 보세요.</p></div>
+<div class="mode-choice"><label class="mode-card"><input type="radio" name="student-mode" value="compare" checked><span><strong>방법 1. 내가 생각한 답과 AI 비교하기</strong><small>각을 그리거나 카메라로 보여 주고, AI 분석 전에 내가 생각하는 각을 선택해요.</small></span></label><label class="mode-card"><input type="radio" name="student-mode" value="target"><span><strong>방법 2. 목표 각 만들기</strong><small>acute angle·right angle·obtuse angle 중 하나를 선택한 뒤, 그 각을 그리거나 카메라로 보여 주세요.</small></span></label></div>
+<div id="compare-answer-box" class="field"><label for="student-answer">AI 분석 전에 내가 생각하는 각을 선택하세요</label><select id="student-answer"><option value="">내 생각 선택하기</option><option>acute angle</option><option>right angle</option><option>obtuse angle</option><option>not angle</option></select></div>
+<div id="target-answer-box" class="field hidden"><label for="target-answer">만들고 싶은 각을 선택하세요</label><select id="target-answer"><option value="">목표 각 선택하기</option><option>acute angle</option><option>right angle</option><option>obtuse angle</option></select><p class="muted">선택한 각에 맞게 두 곧은 선을 한 꼭짓점에서 만나도록 그려 보세요.</p></div>
 <div class="grid">
 <div><h3>📷 웹캠으로 확인</h3><video id="video" class="preview" autoplay playsinline muted></video><div class="row"><button id="camera-start">카메라 켜기</button><button id="camera-snap" class="secondary" disabled>현재 화면 분석</button><button id="camera-stop" class="secondary" disabled>카메라 끄기</button></div><p class="muted">카메라는 버튼을 눌렀을 때만 켜집니다.</p></div>
 <div><h3>🖼️ 사진 올리기</h3><input id="image-file" type="file" accept="image/*"><img id="image-preview" class="preview hidden" alt="선택한 각도 사진 미리보기"><button id="image-analyze" class="secondary" disabled>사진 속 각 분석</button><p class="muted">개인정보가 포함되지 않은 각도 사진을 사용해 주세요.</p></div>
@@ -79,7 +79,7 @@ text-align:center;
 <div class="field"><h3>✏️ 화면에 직접 그리기</h3><p class="muted">선을 한 번 드래그하면 시작점과 끝점 사이가 곧은 선으로 그려집니다. 꼭짓점에서 시작해 두 선을 그려 보세요.</p><div class="canvas-wrap"><canvas id="draw-canvas" width="520" height="340" aria-label="곧은 선으로 각도를 그리는 공간"></canvas></div><div class="row" style="margin-top:10px"><button id="draw-clear" class="secondary">다시 그리기</button><button id="draw-analyze">그린 각 분석</button></div></div>
 <div id="result" class="result-box"><div class="muted">분석 결과가 여기에 표시됩니다.</div><div class="big-result">준비됐나요?</div><p>활동 방법과 답을 선택한 뒤 각도를 보여 주세요.</p></div><div id="probabilities"></div>
 </div>
-<div class="panel"><h2>각의 약속 확인하기</h2><div class="rule-grid"><div class="rule"><strong>예각</strong><small>0°보다 크고 90°보다 작아요.</small></div><div class="rule"><strong>직각</strong><small>정확히 90°예요.</small></div><div class="rule"><strong>둔각</strong><small>90°보다 크고 180°보다 작아요.</small></div><div class="rule"><strong>각이 아님</strong><small>두 곧은 선이 한 점에서 만나지 않는 모양이에요.</small></div></div><p class="notice">AI 결과는 참고 자료예요. 각도기로 직접 확인하며 배워 보세요.</p></div>
+<div class="panel"><h2>각의 약속 확인하기</h2><div class="rule-grid"><div class="rule"><strong>acute angle</strong><small>0°보다 크고 90°보다 작아요.</small></div><div class="rule"><strong>right angle</strong><small>정확히 90°예요.</small></div><div class="rule"><strong>obtuse angle</strong><small>90°보다 크고 180°보다 작아요.</small></div><div class="rule"><strong>not angle</strong><small>두 곧은 선이 한 점에서 만나지 않는 모양이에요.</small></div></div><p class="notice">AI 결과는 참고 자료예요. 각도기로 직접 확인하며 배워 보세요.</p></div>
 </section>
 
 <section id="teacher-panel">
@@ -118,7 +118,7 @@ text-align:center;
 <aside class="side-nav"><div class="brand"><b>📐 각도 탐험대</b><small>교사용 수업 관리</small></div><div class="nav-caption">CLASSROOM</div><div class="nav-list">
 <button class="nav-btn active" data-page="home">⌂ 홈 대시보드</button><button class="nav-btn" data-page="special">★ 특별 학습</button><button class="nav-btn" data-page="assignments">▤ 과제 관리</button><button class="nav-btn" data-page="assessment">✓ 평가 관리</button><button class="nav-btn" data-page="analytics">▥ 학습 분석</button><button class="nav-btn" data-page="students">♙ 학생 관리</button><button class="nav-btn" data-page="board">▧ 학급 게시판</button><button class="nav-btn" data-page="ai-lab">◎ AI 성능 실험실</button></div><div class="nav-caption">수업 정보</div><p style="padding:0 10px;color:#d3def0;font-size:13px">초등 수학 · 1학기 2단원<br>각도</p></aside>
 <div class="teacher-view"><div class="dash-top"><div><p class="muted">교사용 클래스룸 / 수학</p><h1 id="page-title">홈 대시보드</h1></div><span class="pill">교사용 화면</span></div>
-<div id="page-home" class="subpage active"><div class="panel"><h2>오늘의 수업을 한눈에 확인하세요.</h2><p>예각·직각·둔각 분류 활동을 운영하고 학생 참여와 AI 테스트 결과를 점검할 수 있습니다.</p><div class="dash-grid"><div class="dash-card"><small>등록 학생</small><strong id="home-students">0명</strong></div><div class="dash-card"><small>과제</small><strong id="home-assignments">0개</strong></div><div class="dash-card"><small>평가 기록</small><strong id="home-assessments">0개</strong></div><div class="dash-card"><small>게시글</small><strong id="home-posts">0개</strong></div></div><p class="notice">시제품 안내: 명단·과제·게시글은 이 브라우저에 저장됩니다. 실제 여러 기기의 실시간 접속 상태 공유에는 Firebase 등 공용 서버와 학생별 로그인 기능이 필요합니다.</p></div><div class="grid"><div class="panel"><h3>빠른 시작</h3><p>학생 명단을 확인하고 이름을 관리하세요.</p><button data-goto="students">학생 관리 열기</button></div><div class="panel"><h3>AI 모델 점검</h3><p>여러 장의 사진을 실제 정답과 비교합니다.</p><button data-goto="ai-lab">AI 성능 실험실 열기</button></div></div></div>
+<div id="page-home" class="subpage active"><div class="panel"><h2>오늘의 수업을 한눈에 확인하세요.</h2><p>acute angle·right angle·obtuse angle 분류 활동을 운영하고 학생 참여와 AI 테스트 결과를 점검할 수 있습니다.</p><div class="dash-grid"><div class="dash-card"><small>등록 학생</small><strong id="home-students">0명</strong></div><div class="dash-card"><small>과제</small><strong id="home-assignments">0개</strong></div><div class="dash-card"><small>평가 기록</small><strong id="home-assessments">0개</strong></div><div class="dash-card"><small>게시글</small><strong id="home-posts">0개</strong></div></div><p class="notice">시제품 안내: 명단·과제·게시글은 이 브라우저에 저장됩니다. 실제 여러 기기의 실시간 접속 상태 공유에는 Firebase 등 공용 서버와 학생별 로그인 기능이 필요합니다.</p></div><div class="grid"><div class="panel"><h3>빠른 시작</h3><p>학생 명단을 확인하고 이름을 관리하세요.</p><button data-goto="students">학생 관리 열기</button></div><div class="panel"><h3>AI 모델 점검</h3><p>여러 장의 사진을 실제 정답과 비교합니다.</p><button data-goto="ai-lab">AI 성능 실험실 열기</button></div></div></div>
 
 <div id="page-special" class="subpage"><div class="special-page">
 <div class="special-head"><h2>특별 학습</h2><button id="special-manage" class="special-manage">특별 학습 노출 관리</button></div>
@@ -126,20 +126,20 @@ text-align:center;
 <div id="special-list" class="special-list"></div>
 </div></div>
 
-<div id="page-assignments" class="subpage"><div class="panel"><h2>과제 관리</h2><div class="field"><label for="assignment-title">과제 이름</label><input id="assignment-title" type="text" placeholder="예: 주변에서 예각·둔각 찾기"></div><div class="field"><label for="assignment-desc">과제 안내</label><input id="assignment-desc" type="text" placeholder="사진을 올리고 각의 종류를 설명하세요."></div><button id="add-assignment">과제 등록</button><div id="assignment-list"></div></div></div>
-<div id="page-assessment" class="subpage"><div class="panel"><h2>평가 관리</h2><p class="muted">교사가 학생별 개념 이해도를 기록합니다.</p><div class="field"><label for="assessment-student">학생</label><select id="assessment-student"></select></div><div class="field"><label for="assessment-topic">평가 항목</label><select id="assessment-topic"><option>예각·직각·둔각 구별</option><option>분류 근거 설명</option><option>각도기로 확인하기</option></select></div><div class="field"><label for="assessment-level">이해도</label><select id="assessment-level"><option>잘 이해함</option><option>연습이 더 필요함</option><option>개별 지도가 필요함</option></select></div><button id="add-assessment">평가 기록 저장</button><div id="assessment-list"></div></div></div>
+<div id="page-assignments" class="subpage"><div class="panel"><h2>과제 관리</h2><div class="field"><label for="assignment-title">과제 이름</label><input id="assignment-title" type="text" placeholder="예: 주변에서 acute angle·obtuse angle 찾기"></div><div class="field"><label for="assignment-desc">과제 안내</label><input id="assignment-desc" type="text" placeholder="사진을 올리고 각의 종류를 설명하세요."></div><button id="add-assignment">과제 등록</button><div id="assignment-list"></div></div></div>
+<div id="page-assessment" class="subpage"><div class="panel"><h2>평가 관리</h2><p class="muted">교사가 학생별 개념 이해도를 기록합니다.</p><div class="field"><label for="assessment-student">학생</label><select id="assessment-student"></select></div><div class="field"><label for="assessment-topic">평가 항목</label><select id="assessment-topic"><option>acute angle·right angle·obtuse angle 구별</option><option>분류 근거 설명</option><option>각도기로 확인하기</option></select></div><div class="field"><label for="assessment-level">이해도</label><select id="assessment-level"><option>잘 이해함</option><option>연습이 더 필요함</option><option>개별 지도가 필요함</option></select></div><button id="add-assessment">평가 기록 저장</button><div id="assessment-list"></div></div></div>
 <div id="page-analytics" class="subpage"><div class="panel"><h2>학습 분석</h2><p class="muted">현재 브라우저에 저장된 과제·평가 기록 요약입니다. 학생 활동의 실제 분석은 공용 데이터베이스 연동 후 가능합니다.</p><div class="dash-grid"><div class="dash-card">학생<strong id="analytics-students">20</strong></div><div class="dash-card">과제 수<strong id="analytics-assignments">0</strong></div><div class="dash-card">평가 기록<strong id="analytics-assessments">0</strong></div><div class="dash-card">개별 지도 필요<strong id="analytics-support">0</strong></div></div><div id="analytics-summary"></div><h3>학생별 학습 현황</h3><p class="muted">학생이 선택한 번호, 최근 활동, 정답 수와 누적 점수를 확인할 수 있습니다.</p><div id="student-learning-list"></div></div></div>
 <div id="page-students" class="subpage"><div class="panel"><h2>학생 관리</h2><p class="muted">학생 명단과 이름을 관리합니다. 학생 이름은 기본값이며, 필요하면 아래 명단에서 수정할 수 있습니다.</p><div id="student-list"></div><p class="notice">온라인 상태는 아직 실제 접속 여부가 아닌 시범 표시입니다. 실제 학생별 온라인·오프라인 상태에는 서버와 학생별 로그인/접속 코드가 필요합니다.</p></div></div>
 <div id="page-board" class="subpage"><div class="panel"><h2>학급 게시판</h2><p class="muted">공지, 질문, 활동 소감을 자유롭게 작성합니다. 게시글은 이 브라우저에 저장됩니다.</p><div class="field"><label for="post-author">작성자</label><input id="post-author" type="text" placeholder="교사 또는 학생 별칭"></div><div class="field"><label for="post-title">제목</label><input id="post-title" type="text" placeholder="게시글 제목"></div><div class="field"><label for="post-body">내용</label><textarea id="post-body" rows="3" placeholder="함께 나눌 내용을 적어 주세요."></textarea></div><button id="add-post">게시글 올리기</button><div id="board-list"></div></div></div>
 </div></div></section>
 
 <section id="teacher-ai-panel" class="hidden">
-<div class="panel"><span class="pill">교사용 수업 안내</span><h2 style="margin-top:10px">각도 탐험대 · 수업 활용 가이드</h2><p>예각과 둔각의 정의를 익힌 뒤, 학생이 분류한 각이 정확한지 스스로 점검하도록 돕는 도구입니다. 교사는 아래 수업 흐름에 따라 활동을 안내하고, 학생의 결과를 확인하며 추가 지도를 계획할 수 있습니다.</p>
-<div class="rule-grid"><div class="rule"><strong>학습 목표</strong><small>각의 크기를 기준으로 예각·직각·둔각을 구별하고, 분류 결과를 근거와 함께 점검한다.</small></div><div class="rule"><strong>준비하기</strong><small>각도기와 각도 사진을 준비합니다. 선이 뚜렷하고 배경이 단순한 사진을 권장합니다.</small></div><div class="rule"><strong>활동하기</strong><small>학생용 활동에서 각을 직접 그리거나 사진을 분석하고, 예측 결과를 각의 약속과 비교합니다.</small></div><div class="rule"><strong>평가·피드백</strong><small>아래 테스트 분석에서 오분류와 확신이 낮은 사진을 확인하고, 필요한 개념을 다시 지도합니다.</small></div></div>
-<h3 style="margin-top:20px">권장 수업 흐름</h3><ol><li><strong>개념 확인:</strong> 예각은 90°보다 작고, 직각은 90°이며, 둔각은 90°보다 크고 180°보다 작음을 확인합니다.</li><li><strong>학생 활동:</strong> ‘학생용 · 각도 확인 활동’ 탭에서 각을 그리거나 사진을 올려 AI의 분류 결과를 확인합니다.</li><li><strong>자기 점검:</strong> AI의 결과를 정답으로 단정하지 않고, 각의 크기와 각도기 측정 결과를 비교합니다.</li><li><strong>교사 분석:</strong> 아래에 테스트 사진과 실제 정답을 입력해 종류별 정답률과 오분류 사례를 살펴봅니다.</li></ol>
+<div class="panel"><span class="pill">교사용 수업 안내</span><h2 style="margin-top:10px">각도 탐험대 · 수업 활용 가이드</h2><p>acute angle과 obtuse angle의 정의를 익힌 뒤, 학생이 분류한 각이 정확한지 스스로 점검하도록 돕는 도구입니다. 교사는 아래 수업 흐름에 따라 활동을 안내하고, 학생의 결과를 확인하며 추가 지도를 계획할 수 있습니다.</p>
+<div class="rule-grid"><div class="rule"><strong>학습 목표</strong><small>각의 크기를 기준으로 acute angle·right angle·obtuse angle을 구별하고, 분류 결과를 근거와 함께 점검한다.</small></div><div class="rule"><strong>준비하기</strong><small>각도기와 각도 사진을 준비합니다. 선이 뚜렷하고 배경이 단순한 사진을 권장합니다.</small></div><div class="rule"><strong>활동하기</strong><small>학생용 활동에서 각을 직접 그리거나 사진을 분석하고, 예측 결과를 각의 약속과 비교합니다.</small></div><div class="rule"><strong>평가·피드백</strong><small>아래 테스트 분석에서 오분류와 확신이 낮은 사진을 확인하고, 필요한 개념을 다시 지도합니다.</small></div></div>
+<h3 style="margin-top:20px">권장 수업 흐름</h3><ol><li><strong>개념 확인:</strong> acute angle은 90°보다 작고, right angle은 90°이며, obtuse angle은 90°보다 크고 180°보다 작음을 확인합니다.</li><li><strong>학생 활동:</strong> ‘학생용 · 각도 확인 활동’ 탭에서 각을 그리거나 사진을 올려 AI의 분류 결과를 확인합니다.</li><li><strong>자기 점검:</strong> AI의 결과를 정답으로 단정하지 않고, 각의 크기와 각도기 측정 결과를 비교합니다.</li><li><strong>교사 분석:</strong> 아래에 테스트 사진과 실제 정답을 입력해 종류별 정답률과 오분류 사례를 살펴봅니다.</li></ol>
 <p class="notice">지도 유의점: AI 결과는 학습을 위한 참고 자료입니다. 특히 90°에 가까운 각은 오분류될 수 있으므로, 학생에게 판단 근거를 설명하게 하고 각도기로 확인하도록 안내하세요.</p>
 </div>
-<div class="panel"><div class="teacher-ai-title"><h2>AI 성능 실험실 · 다량의 사진 테스트</h2><span class="pill">다중 이미지 분석</span></div><p class="muted">여러 장의 사진을 한 번에 분석하고 실제 정답과 비교합니다. 파일명에 예각·직각·둔각·각이 아님이 포함되면 정답 선택을 자동으로 채웁니다. 자동 선택된 정답은 실행 전에 확인하세요.</p><div class="panel"><h2>교사용 결과 분석</h2><p class="muted">정답 종류를 지정한 사진을 여러 장 올리면 종류별 정답률과 AI가 헷갈린 각도를 확인할 수 있습니다. 테스트 사진은 브라우저 안에서만 분석됩니다.</p>
+<div class="panel"><div class="teacher-ai-title"><h2>AI 성능 실험실 · 다량의 사진 테스트</h2><span class="pill">다중 이미지 분석</span></div><p class="muted">여러 장의 사진을 한 번에 분석하고 실제 정답과 비교합니다. 파일명에 acute angle·right angle·obtuse angle·not angle이 포함되면 정답 선택을 자동으로 채웁니다. 자동 선택된 정답은 실행 전에 확인하세요.</p><div class="panel"><h2>교사용 결과 분석</h2><p class="muted">정답 종류를 지정한 사진을 여러 장 올리면 종류별 정답률과 AI가 헷갈린 각도를 확인할 수 있습니다. 테스트 사진은 브라우저 안에서만 분석됩니다.</p>
 <div class="field"><label for="batch-files">테스트 사진 여러 장 선택</label><input id="batch-files" type="file" accept="image/*" multiple></div>
 <div id="batch-labels" class="field"><label>사진별 실제 정답을 선택하세요</label><p class="muted">파일을 선택하면 사진마다 실제 정답 선택 칸이 나타납니다.</p></div>
 <div class="row"><button id="run-batch">선택한 사진 분석하기</button><button id="export-csv" class="secondary" disabled>CSV 내려받기</button><button id="clear-batch" class="secondary">테스트 초기화</button></div><p id="batch-status" class="muted" role="status"></p>
@@ -154,7 +154,7 @@ text-align:center;
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
 <script>
-const CLASS_NAMES=['예각','직각','둔각','각이 아님'];
+const CLASS_NAMES=['acute angle','right angle','obtuse angle','not angle'];
 let model=null, stream=null, selectedImage=null, batchFiles=[], batchResults=[];
 const $=id=>document.getElementById(id);
 const canvas=$('draw-canvas'),ctx=canvas.getContext('2d');
@@ -166,7 +166,7 @@ document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{doc
 async function loadModel(){const raw=$('model-url').value.trim();if(!raw){setStatus('모델 폴더 주소를 입력해 주세요.');return}let base=raw.endsWith('/')?raw:raw+'/';setStatus('모델을 불러오는 중입니다…');$('load-model').disabled=true;try{model=await tmImage.load(base+'model.json',base+'metadata.json');setStatus('모델을 불러왔어요. '+model.getTotalClasses()+'개 종류를 분류할 수 있습니다.');$('camera-start').disabled=false;$('image-analyze').disabled=!selectedImage;$('draw-analyze').disabled=false;$('run-batch').disabled=false}catch(e){console.error(e);model=null;setStatus('모델을 불러오지 못했어요. 모델 주소와 model.json, metadata.json, weights.bin 파일을 확인해 주세요.')}finally{$('load-model').disabled=false}}
 $('load-model').addEventListener('click',loadModel);
 async function predictSource(source){if(!model){setStatus('먼저 모델을 불러와 주세요.');return null}try{const preds=await model.predict(source);return preds.map(p=>({label:p.className,prob:p.probability})).sort((a,b)=>b.prob-a.prob)}catch(e){console.error(e);setStatus('분석에 실패했어요. 사진을 다시 선택해 주세요.');return null}}
-function feedback(label,confidence){if(confidence<.7)return {title:'잘 모르겠습니다.',detail:'각이 명확하게 보이도록 다시 비춰주세요. 선을 더 진하게 그리고 배경을 단순하게 해 보세요.',kind:'warn'};let detail='AI의 답을 각의 약속과 비교해 보세요.';if(label==='예각')detail='90°보다 작은 각인지 확인해 보세요.';else if(label==='직각')detail='두 변이 수직으로 만나 90°인지 각도기로 확인해 보세요.';else if(label==='둔각')detail='90°보다 크고 180°보다 작은지 확인해 보세요.';else if(label==='각이 아님')detail='두 반직선이 한 점에서 만나는지, 선이 곧은지 확인해 보세요.';return {title:label,detail,kind:confidence<.85?'warn':'good'}}
+function feedback(label,confidence){if(confidence<.7)return {title:'잘 모르겠습니다.',detail:'각이 명확하게 보이도록 다시 비춰주세요. 선을 더 진하게 그리고 배경을 단순하게 해 보세요.',kind:'warn'};let detail='AI의 답을 각의 약속과 비교해 보세요.';if(label==='acute angle')detail='90°보다 작은 각인지 확인해 보세요.';else if(label==='right angle')detail='두 변이 수직으로 만나 90°인지 각도기로 확인해 보세요.';else if(label==='obtuse angle')detail='90°보다 크고 180°보다 작은지 확인해 보세요.';else if(label==='not angle')detail='두 반직선이 한 점에서 만나는지, 선이 곧은지 확인해 보세요.';return {title:label,detail,kind:confidence<.85?'warn':'good'}}
 function activeStudentMode(){return document.querySelector('input[name="student-mode"]:checked')?.value||'compare'}
 function selectedExpected(){return activeStudentMode()==='compare'?$('student-answer').value:$('target-answer').value}
 function canAnalyze(){if(!model){setStatus('먼저 모델을 불러와 주세요.');return false}if(!selectedExpected()){alert(activeStudentMode()==='compare'?'AI 분석 전에 내가 생각하는 각을 선택해 주세요.':'먼저 목표 각을 선택해 주세요.');return false}return true}
@@ -233,7 +233,7 @@ renderClass=function(){priorRenderClass()};
 
 const specialDefaults=[
 {id:'angle-basics',tag:'학습 전',title:'각의 기본 개념 복습',desc:'각의 꼭짓점과 두 변을 확인하고 각이 만들어지는 모습을 복습합니다.',short:'각의 기본 개념',visible:true},
-{id:'acute-right-obtuse',tag:'개념 학습',title:'예각·직각·둔각 알아보기',desc:'직각을 기준으로 예각과 둔각을 구별하고 분류한 이유를 확인합니다.',short:'예각·직각·둔각',visible:true},
+{id:'acute-right-obtuse',tag:'개념 학습',title:'acute angle·right angle·obtuse angle 알아보기',desc:'right angle을 기준으로 acute angle과 obtuse angle을 구별하고 분류한 이유를 확인합니다.',short:'acute·right·obtuse angle',visible:true},
 {id:'angle-hunt',tag:'탐구 활동',title:'주변에서 여러 가지 각 찾기',desc:'교실과 생활 속 물건에서 각을 찾아 종류를 분류해 봅니다.',short:'주변에서 각 찾기',visible:true},
 {id:'check-my-answer',tag:'자기 점검',title:'내가 분류한 각 다시 확인하기',desc:'사진이나 직접 그린 각을 AI 예측과 비교하고 결과를 스스로 점검합니다.',short:'분류 결과 확인',visible:true}
 ];
@@ -296,7 +296,7 @@ renderSpecial();
  const matrixBox=document.getElementById('eval-matrix');
  const wrongBox=document.getElementById('eval-wrong');
  if(!input||!button)return;
- const labels=['예각','직각','둔각','각이 아님'];
+ const labels=['acute angle','right angle','obtuse angle','not angle'];
  const unknownLabel='미확인';
  const allLabels=[...labels,unknownLabel];
  let files=[];
@@ -307,10 +307,10 @@ renderSpecial();
   if(!raw) return unknownLabel;
   const key=String(raw).trim().toLowerCase().replace(/[_-]+/g,' ').replace(/\s+/g,' ');
   const map={
-    'acute angle':'예각','acute':'예각','예각':'예각',
-    'right angle':'직각','right':'직각','직각':'직각',
-    'obtuse angle':'둔각','obtuse':'둔각','둔각':'둔각',
-    'not angle':'각이 아님','no angle':'각이 아님','none':'각이 아님','angle is not':'각이 아님','각이 아님':'각이 아님','아님':'각이 아님'
+    'acute angle':'acute angle','acute':'acute angle','예각':'acute angle',
+    'right angle':'right angle','right':'right angle','직각':'right angle',
+    'obtuse angle':'obtuse angle','obtuse':'obtuse angle','둔각':'obtuse angle',
+    'not angle':'not angle','no angle':'not angle','none':'not angle','angle is not':'not angle','각이 아님':'not angle','아님':'not angle'
   };
   return map[key]||unknownLabel;
  }
