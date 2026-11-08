@@ -110,6 +110,7 @@ text-align:center;
 <div id="eval-matrix">
 <table><tr><th>실제＼예측</th></tr></table>
 </div>
+<button id="eval-export-confusion-csv" class="secondary" disabled>혼동행렬 CSV 내려받기</button>
 </div>
 
 <div class="eval-card">
@@ -261,12 +262,13 @@ renderSpecial();
  const accuracyBox=document.getElementById('eval-accuracy');
  const matrixBox=document.getElementById('eval-matrix');
  const wrongBox=document.getElementById('eval-wrong');
+ const exportMatrixButton=document.getElementById('eval-export-confusion-csv');
  if(!input||!button)return;
  const labels=['acute angle','right angle','obtuse angle','not angle'];
  const unknownLabel='미확인';
  const allLabels=[...labels,unknownLabel];
- let files=[];
- input.onchange=e=>{files=[...e.target.files];count.textContent='선택한 사진 '+files.length+'장';};
+ let files=[],lastResults=[];
+ input.onchange=e=>{files=[...e.target.files];lastResults=[];exportMatrixButton.disabled=true;count.textContent='선택한 사진 '+files.length+'장';};
  const load=file=>new Promise((res,rej)=>{const i=new Image();const url=URL.createObjectURL(file);i.onload=()=>{URL.revokeObjectURL(url);res(i)};i.onerror=err=>{URL.revokeObjectURL(url);rej(err)};i.src=url});
  // 한국어/영어 라벨을 공통 영어 클래스명으로 변환합니다.
  function normalizeClassLabel(raw){
@@ -308,6 +310,7 @@ renderSpecial();
   }finally{button.disabled=false}
   if(!results.length){count.textContent='분석 가능한 사진이 없습니다.';return}
   count.textContent='분석 완료: '+results.length+'장';
+  lastResults=results;
   const correct=results.filter(r=>r.actual===r.predicted).length;
   const rate=results.length?Math.round(correct/results.length*100):0;
   const stat={}; allLabels.forEach(l=>stat[l]={n:0,c:0});
@@ -318,6 +321,7 @@ renderSpecial();
   let html='<table><tr><th>실제 ↓ / 예측 →</th>'+allLabels.map(l=>'<th>'+l+'</th>').join('')+'</tr>';
   allLabels.forEach(a=>{html+='<tr><th>'+a+'</th>'+allLabels.map(b=>'<td class="center">'+results.filter(r=>r.actual===a&&r.predicted===b).length+'</td>').join('')+'</tr>'});
   matrixBox.innerHTML=html+'</table>';
+  exportMatrixButton.disabled=false;
   wrongBox.innerHTML='';
   const wrongResults=results.filter(r=>r.actual!==r.predicted);
   if(!wrongResults.length){wrongBox.textContent='이번 분석에서는 오분류가 없습니다.';return}
@@ -335,6 +339,19 @@ renderSpecial();
    card.append(image,title,detail);
    wrongBox.appendChild(card);
   });
+ };
+ exportMatrixButton.onclick=()=>{
+  if(!lastResults.length)return;
+  const rows=[['실제 정답 ↓ / AI 예측 →',...labels],...labels.map(actual=>[
+   actual,
+   ...labels.map(pred=>lastResults.filter(r=>r.actual===actual&&r.predicted===pred).length)
+  ])];
+  const csv='\uFEFF'+rows.map(row=>row.map(value=>'"'+String(value).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const link=document.createElement('a');
+  link.href=URL.createObjectURL(new Blob([csv],{type:'text/csv;charset=utf-8;'}));
+  link.download='혼동행렬.csv';
+  link.click();
+  URL.revokeObjectURL(link.href);
  };
 })();
 </script>
