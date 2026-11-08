@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>자세 모델 가리기 실험기</title>
+<!-- 그래픽스개론 10주차. 티처블 머신 '포즈 프로젝트' 모델용 가리기 실험기.
+     포즈 모델은 사진 픽셀이 아니라 PoseNet 이 뽑은 관절 히트맵(17개 관절)을 보고 판정한다.
+     실험 1 관절 가리기: 관절을 하나씩 지우고 확률이 얼마나 떨어지는지 본다.
+     실험 2 사진 가리기: 이미지 모델용 실험기와 같은 격자 실험. PoseNet 을 거쳐 영향을 본다.
+     모든 처리는 브라우저 안에서만 하며 사진은 외부로 나가지 않는다. -->
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
+<style>
+  body { font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; margin: 0; background: #f6f7f9; color: #1e1e1e; }
+  header { background: #073e7b; color: #fff; padding: 14px 22px; }
+  header h1 { margin: 0; font-size: 20px; }
+  header p { margin: 4px 0 0; font-size: 13px; opacity: .9; }
+  main { max-width: 1180px; margin: 18px auto; padding: 0 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  section { background: #fff; border: 1px solid #dee2e6; border-radius: 8px; padding: 14px 16px; }
+  section h2 { font-size: 15px; margin: 0 0 10px; color: #073e7b; }
+  label { font-size: 13px; display: block; margin: 8px 0 3px; }
+  select, input[type=file] { font-size: 14px; }
+  button { font-size: 14px; padding: 7px 14px; border: 0; border-radius: 6px; background: #1971c2; color: #fff; cursor: pointer; margin: 4px 6px 4px 0; }
+  button.gray { background: #868e96; }
+  button:disabled { background: #adb5bd; cursor: default; }
+  canvas { max-width: 100%; border: 1px solid #ced4da; background: #fff; }
+  table { border-collapse: collapse; font-size: 12.5px; margin-top: 8px; width: 100%; }
+  th, td { border: 1px solid #dee2e6; padding: 3px 6px; text-align: center; }
+  th { background: #e7f5ff; }
+  td.l { text-align: left; }
+  tr.top td { background: #ffe3e3; font-weight: bold; }
+  tr.miss td { color: #868e96; }
+  .row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-end; }
+  .note { font-size: 12.5px; color: #495057; margin-top: 8px; line-height: 1.5; }
+  .warn { background: #fff9db; border: 1px solid #f08c00; border-radius: 6px; padding: 8px 10px; font-size: 13px; margin-top: 8px; line-height: 1.5; }
+  .warn:empty { display: none; }
+  .big { font-size: 22px; font-weight: bold; color: #073e7b; }
+  .wide { grid-column: 1 / span 2; }
+  #status { font-size: 13px; color: #495057; margin-bottom: 6px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>자세 모델 가리기 실험기</h1>
+  <p>포즈 모델은 사진이 아니라 PoseNet 이 찾은 관절 17개의 위치를 보고 판정합니다. 관절을 하나씩 지웠을 때, 그리고 사진의 한 칸씩 가렸을 때 고른 클래스의 확률이 얼마나 떨어지는지 봅니다.</p>
+</header>
+<main>
+  <section>
+    <h2>1. 모델과 사진</h2>
+    <div id="status">모델을 불러오는 중입니다...</div>
+    <label>모델 파일 3개 고르기 (model.json, metadata.json, weights.bin 을 한꺼번에 선택)</label>
+    <input type="file" id="mfiles" accept=".json,.bin" multiple>
+    <div class="note">티처블 머신 포즈 프로젝트에서 내보내기(Tensorflow.js, 다운로드)로 받은 압축을 풀면 나오는 세 파일입니다. 이 화면이 배포 주소의 model.json 과 같은 폴더에 있으면 자동으로 읽습니다. PoseNet 은 인터넷에서 받아오므로 인터넷이 되어야 합니다.</div>
+    <label>사진 고르기 (한 장)</label>
+    <input type="file" id="file" accept="image/*" disabled>
+    <div class="row">
+      <div><label>볼 클래스 (예측 클래스로 맞춰짐)</label><select id="cls"></select></div>
+      <div><label>사진 가리기 격자</label><select id="grid"><option>4</option><option selected>6</option><option>8</option></select></div>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button id="runkp" disabled>실험 1 관절 가리기</button>
+      <button id="runimg" disabled>실험 2 사진 가리기</button>
+      <button id="csv" class="gray" disabled>CSV 내려받기</button>
+      <button id="png" class="gray" disabled>그림 저장</button>
+    </div>
+    <div class="note">원본 확률 <span id="basep" class="big">-</span> <span id="basecls"></span></div>
+    <div id="lowwarn" class="warn"></div>
+    <div class="note">틀린 사진은 모델이 예측한 클래스 그대로 두고 실행하세요. 모델이 어느 관절을 보고 그렇게 판정했는지가 나옵니다. 정답 확률이 원래 낮으면 떨어질 것이 없어 전부 0으로 나옵니다.</div>
+  </section>
+  <section>
+    <h2>2. 사진과 찾은 관절</h2>
+    <canvas id="view" width="420" height="420"></canvas>
+    <div class="note">점은 PoseNet 이 찾은 관절, 선은 뼈대입니다. 점수 0.3 미만인 관절은 회색 속 빈 점으로 그립니다. 실험 1을 돌리면 많이 떨어진 관절 3개를 빨간 테두리로 표시합니다.</div>
+  </section>
+  <section class="wide">
+    <h2>3. 읽기</h2>
+    <div id="summary" class="note">실험 1은 관절을 하나씩 지운 뒤 다시 분류해서 확률이 얼마나 떨어지는지 봅니다. 실험 2는 사진 한 칸씩 회색으로 가린 뒤 PoseNet 부터 다시 돌려 봅니다.</div>
+    <div id="kpwrap"></div>
+    <div id="imgwrap" style="margin-top:12px"></div>
+  </section>
+</main>
+<canvas id="work" style="display:none"></canvas>
+<canvas id="heat" width="480" height="480" style="display:none"></canvas>
+<script>
+const GRAY = 128;
+const KP_KO = ["코", "왼눈", "오른눈", "왼귀", "오른귀", "왼어깨", "오른어깨", "왼팔꿈치", "오른팔꿈치", "왼손목", "오른손목",
+               "왼엉덩이", "오른엉덩이", "왼무릎", "오른무릎", "왼발목", "오른발목"];
+const KP_GROUP = ["머리", "머리", "머리", "머리", "머리", "팔·어깨", "팔·어깨", "팔·어깨", "팔·어깨", "팔·어깨", "팔·어깨",
+                  "몸통·다리", "몸통·다리", "몸통·다리", "몸통·다리", "몸통·다리", "몸통·다리"];
+const NKP = 17, PER_CELL = 51;        // 칸마다 히트맵 17 + 오프셋 34
+let model = null, labels = [], img = null, baseProbs = null, basePose = null, baseOut = null;
+let kpResult = null, imgResult = null;
+const $ = (id) => document.getElementById(id);
+const status = (t) => { $("status").textContent = t; };
+function argmax(a) { let m = 0; for (let i = 1; i < a.length; i++) if (a[i] > a[m]) m = i; return m; }
+
+// ---- 모델 불러오기 (이미지용 실험기와 같은 방식) ----
+const DEFAULT_BASES = ["./", "./my_model/", "./model/", "./models/", "./tm_model/", "./my-model/", "./public/", "./assets/", "./static/"];
+function normBase(b) { b = b.trim().replace(/model\.json$/, "").replace(/metadata\.json$/, ""); if (!b) return "./"; if (!b.endsWith("/")) b += "/"; return b; }
+async function basesFromIndex() {
+  const found = [];
+  try {
+    const r = await fetch("./index.html", { cache: "no-store" }); if (!r.ok) return found;
+    const html = await r.text();
+    for (const m of html.matchAll(/(?:URL|url|modelURL|MODEL_URL|modelUrl|modelPath|MODEL_PATH|base|BASE)\s*=\s*["'`]([^"'`]{1,300}?)["'`]/g)) found.push(normBase(m[1]));
+    for (const m of html.matchAll(/["'`]([^"'`\s]{0,300}\/)(?:model|metadata)\.json["'`]/g)) found.push(normBase(m[1]));
+  } catch (e) { }
+  return found;
+}
+async function findModelBase(tried) {
+  const bases = [];
+  for (const b of [...await basesFromIndex(), ...DEFAULT_BASES]) if (!bases.includes(b)) bases.push(b);
+  for (const b of bases) {
+    tried.push(b);
+    try { const r = await fetch(b + "metadata.json", { cache: "no-store" }); if (!r.ok) continue; const j = await r.json(); if (j && Array.isArray(j.labels)) return b; } catch (e) { }
+  }
+  return null;
+}
+function modelReady(m, how) {
+  model = m; labels = model.getClassLabels();
+  const meta = model.getMetadata ? model.getMetadata() : {};
+  const sel = $("cls"); sel.innerHTML = "";
+  labels.forEach((l, i) => { const o = document.createElement("option"); o.value = i; o.textContent = l; sel.appendChild(o); });
+  $("file").disabled = false; baseProbs = null; $("runkp").disabled = true; $("runimg").disabled = true; $("basep").textContent = "-"; $("basecls").textContent = "";
+  const shp = (model.model && model.model.inputs && model.model.inputs[0]) ? model.model.inputs[0].shape : null;
+  if (shp && shp.length === 4) {   // [null, 224, 224, 3] 이면 사진을 직접 받는 이미지 모델
+    $("file").disabled = true;
+    status("이 모델은 사진을 직접 받는 이미지 프로젝트 모델입니다 (입력 " + shp.slice(1).join("×") + "). 이 화면은 포즈 프로젝트용이니 occlude.html 을 쓰세요.");
+    return;
+  }
+  status("모델을 불러왔습니다" + how + ". 클래스 " + labels.length + "개 (" + labels.join(", ") + ")");
+}
+async function loadModel() {
+  if (typeof tmPose === "undefined") { status("라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하고 새로 고침하세요."); return; }
+  const tried = [];
+  const base = location.protocol === "file:" ? null : await findModelBase(tried);
+  if (!base) {
+    status(location.protocol === "file:" ? "파일을 직접 열었습니다. 위에서 model.json, metadata.json, weights.bin 세 파일을 고르세요."
+      : "이 주소 아래에서 모델을 찾지 못했습니다 (찾아본 곳: " + tried.join(" ") + "). 위에서 세 파일을 직접 고르세요.");
+    return;
+  }
+  try { const m = await tmPose.load(base + "model.json", base + "metadata.json"); modelReady(m, base === "./" ? " (같은 폴더)" : " (" + base + ")"); }
+  catch (e) { status("모델 파일은 " + base + " 에 있는데 읽지 못했습니다 (" + e + "). 위에서 세 파일을 직접 고르세요."); }
+}
+$("mfiles").addEventListener("change", async (ev) => {
+  const fs = Array.from(ev.target.files);
+  const pickBy = (test) => fs.find(f => test(f.name.toLowerCase()));
+  const mj = pickBy(n => n === "model.json" || (n.endsWith(".json") && n.includes("model")));
+  const md = pickBy(n => n === "metadata.json" || (n.endsWith(".json") && n.includes("meta")));
+  const wb = pickBy(n => n.endsWith(".bin"));
+  if (!mj || !md || !wb) { status("세 파일을 한꺼번에 골라야 합니다. 지금 고른 것: " + fs.map(f => f.name).join(", ")); return; }
+  try { status("모델과 PoseNet 을 읽는 중..."); const m = await tmPose.loadFromFiles(mj, wb, md); modelReady(m, " (고른 파일)"); }
+  catch (e) { status("모델 파일을 읽지 못했습니다. 포즈 프로젝트에서 내보낸 세 파일이 맞는지, 인터넷이 되는지 확인하세요. " + e); }
+});
+
+// ---- 사진 그리기: 정사각형 캔버스에 사진 전체가 들어가게(여백은 회색) ----
+function fitCanvas(size, rect) {
+  const c = document.createElement("canvas"); c.width = size; c.height = size; const ctx = c.getContext("2d");
+  ctx.fillStyle = "rgb(" + GRAY + "," + GRAY + "," + GRAY + ")"; ctx.fillRect(0, 0, size, size);
+  const s = Math.min(size / img.width, size / img.height), w = img.width * s, h = img.height * s;
+  ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+  if (rect) { ctx.fillStyle = "rgb(" + GRAY + "," + GRAY + "," + GRAY + ")"; ctx.fillRect(rect.x, rect.y, rect.w, rect.h); }
+  return c;
+}
+async function probsOf(canvas) {
+  const { pose, posenetOutput } = await model.estimatePose(canvas, false);
+  const pred = await model.predict(posenetOutput);
+  return { pose, out: posenetOutput, p: pred.map(x => x.probability) };
+}
+function drawPose(topIdx) {
+  const v = $("view"), ctx = v.getContext("2d");
+  const base = fitCanvas(v.width, null);
+  ctx.clearRect(0, 0, v.width, v.height); ctx.drawImage(base, 0, 0);
+  if (!basePose) return;
+  const kps = basePose.keypoints;
+  if (typeof tmPose.drawSkeleton === "function") tmPose.drawSkeleton(kps, 0.3, ctx);
+  kps.forEach((k, i) => {
+    const ok = k.score >= 0.3;
+    ctx.beginPath(); ctx.arc(k.position.x, k.position.y, 5, 0, Math.PI * 2);
+    ctx.fillStyle = ok ? "#1971c2" : "#fff"; ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = ok ? "#1971c2" : "#868e96"; ctx.stroke();
+    if (topIdx && topIdx.includes(i)) { ctx.beginPath(); ctx.arc(k.position.x, k.position.y, 11, 0, Math.PI * 2); ctx.lineWidth = 3; ctx.strokeStyle = "#e03131"; ctx.stroke(); }
+  });
+}
+$("file").addEventListener("change", async (ev) => {
+  const f = ev.target.files[0]; if (!f) return;
+  img = new Image();
+  img.onload = async () => {
+    URL.revokeObjectURL(img.src);
+    try {
+      status("PoseNet 으로 관절을 찾는 중...");
+      const r = await probsOf(fitCanvas($("view").width, null));
+      basePose = r.pose; baseOut = r.out; baseProbs = r.p;
+      const top = argmax(baseProbs);
+      $("cls").value = top; $("lowwarn").innerHTML = "";
+      $("basep").textContent = baseProbs[top].toFixed(2);
+      $("basecls").textContent = "(모델 판정 " + labels[top] + " " + baseProbs[top].toFixed(2) + ")";
+      drawPose(null);
+      const missing = basePose.keypoints.map((k, i) => k.score < 0.3 ? KP_KO[i] : null).filter(Boolean);
+      $("runkp").disabled = false; $("runimg").disabled = false; kpResult = null; imgResult = null; $("kpwrap").innerHTML = ""; $("imgwrap").innerHTML = ""; $("csv").disabled = true; $("png").disabled = true;
+      status("사진을 읽었습니다. 볼 클래스를 확인하고 실험 1을 누르세요." + (missing.length ? " PoseNet 이 못 잡은 관절(점수 0.3 미만): " + missing.join(", ") : " 관절 17개를 모두 찾았습니다."));
+    } catch (e) {
+      status("이 사진에서 자세를 읽지 못했습니다 (" + e + "). 사람 전신이 보이는 사진인지, 포즈 모델 파일이 맞는지 확인하세요.");
+    }
+  };
+  img.src = URL.createObjectURL(f);
+});
+function lowProbWarn() {
+  if (!baseProbs) return;
+  const ci = parseInt($("cls").value), top = argmax(baseProbs), w = $("lowwarn");
+  if (baseProbs[ci] < 0.05 && ci !== top) {
+    w.innerHTML = "고른 클래스 <b>" + labels[ci] + "</b>의 원본 확률이 " + baseProbs[ci].toFixed(2) + " 이라 어디를 가려도 떨어질 것이 없습니다. 모델이 무엇을 보고 <b>" + labels[top] + "</b>이라고 했는지 보려면 " + labels[top] + "으로 두고 실행하세요. <button id=\"usetop\" type=\"button\">" + labels[top] + "으로 바꾸기</button>";
+    $("usetop").addEventListener("click", () => { $("cls").value = top; $("basep").textContent = baseProbs[top].toFixed(2); lowProbWarn(); });
+  } else w.innerHTML = "";
+}
+$("cls").addEventListener("change", () => { if (baseProbs) { $("basep").textContent = baseProbs[$("cls").value].toFixed(2); lowProbWarn(); } });
+
+// ---- 실험 1. 관절 가리기: 관절 k 의 히트맵과 오프셋을 모든 칸에서 0으로 ----
+function maskKeypoint(out, k) {
+  const o = new Float32Array(out);
+  const cells = out.length / PER_CELL;
+  for (let c = 0; c < cells; c++) { const b = c * PER_CELL; o[b + k] = 0; o[b + NKP + k] = 0; o[b + NKP + NKP + k] = 0; }
+  return o;
+}
+$("runkp").addEventListener("click", async () => {
+  if (!baseOut || !model) return;
+  const ci = parseInt($("cls").value), topc = argmax(baseProbs);
+  if (baseOut.length % PER_CELL !== 0) { status("PoseNet 출력 길이가 예상(칸당 51)과 다릅니다. 길이 " + baseOut.length + ". 실험 2만 쓰세요."); return; }
+  $("runkp").disabled = true;
+  const rows = [];
+  for (let k = 0; k < NKP; k++) {
+    status("관절 가리는 중 " + (k + 1) + " / " + NKP + " (" + KP_KO[k] + ")");
+    const pred = await model.predict(maskKeypoint(baseOut, k));
+    const p = pred[ci].probability;
+    rows.push({ k, name: KP_KO[k], group: KP_GROUP[k], score: basePose.keypoints[k].score, p, d: baseProbs[ci] - p });
+  }
+  kpResult = { ci, rows };
+  const sorted = [...rows].sort((a, b) => b.d - a.d);
+  const maxd = sorted[0].d;
+  const top3 = sorted.slice(0, 3).filter(r => r.d > 0.02);   // 떨어진 양이 거의 없는 관절은 표시하지 않음
+  const groupSum = {}; rows.forEach(r => { groupSum[r.group] = (groupSum[r.group] || 0) + Math.max(0, r.d); });
+  const gmax = Object.entries(groupSum).sort((a, b) => b[1] - a[1])[0];
+  let shape;
+  if (baseProbs[ci] < 0.05 && ci !== topc) shape = "원본 확률이 거의 0인 클래스를 봤기 때문에 떨어질 것이 없어 전부 0입니다. 모델이 예측한 클래스(" + labels[topc] + ")로 바꿔 다시 실행하세요. 이 결과는 분석표에 쓰지 않습니다.";
+  else if (maxd < 0.05) shape = "어느 관절을 지워도 확률이 거의 안 떨어집니다. 한 관절이 아니라 여러 관절의 배치 전체로 판정하거나, 관절 검출 자체가 흔들리는 사진일 수 있습니다. 못 잡은 관절 목록을 보세요.";
+  else if (gmax[0] === "몸통·다리") shape = "몸통·다리 관절에서 주로 떨어집니다. 자세의 핵심 부위를 보고 판정하고 있습니다. 그런데도 틀렸다면 그 관절이 제자리에 찍혔는지(2번 그림) 확인하세요.";
+  else shape = gmax[0] + " 관절에서 주로 떨어집니다. 자세의 핵심 부위가 아닌 관절에 기대고 있을 수 있습니다. 학습 사진에서 그 부위가 클래스와 같이 움직였는지 확인하세요.";
+  const missing = rows.filter(r => r.score < 0.3).map(r => r.name);
+  $("summary").innerHTML = "실험 1. 본 클래스 <b>" + labels[ci] + "</b>, 원본 확률 <b>" + baseProbs[ci].toFixed(2) + "</b>. 가장 많이 떨어진 관절 " +
+    (top3.length ? top3.map(r => r.name + " " + r.d.toFixed(2)).join(", ") : "없음") + ". " + shape + (missing.length ? " PoseNet 이 못 잡은 관절: " + missing.join(", ") + "." : "");
+  let html = "<table><tr><th>관절</th><th>부위</th><th>검출 점수</th><th>지웠을 때 확률</th><th>떨어진 양</th></tr>";
+  rows.forEach(r => {
+    const cls = top3.includes(r) ? "top" : (r.score < 0.3 ? "miss" : "");
+    html += "<tr class=\"" + cls + "\"><td class=\"l\">" + r.name + "</td><td>" + r.group + "</td><td>" + r.score.toFixed(2) + "</td><td>" + r.p.toFixed(2) + "</td><td>" + r.d.toFixed(2) + "</td></tr>";
+  });
+  html += "</table>";
+  $("kpwrap").innerHTML = html;
+  drawPose(top3.map(r => r.k));
+  $("runkp").disabled = false; $("csv").disabled = false; $("png").disabled = false;
+  status("실험 1 끝. 표와 2번 그림의 빨간 테두리를 보고 분석표에 적으세요.");
+});
+
+// ---- 실험 2. 사진 가리기: 한 칸씩 회색으로 가리고 PoseNet 부터 다시 ----
+$("runimg").addEventListener("click", async () => {
+  if (!img || !model) return;
+  const n = parseInt($("grid").value), ci = parseInt($("cls").value), size = $("view").width, cell = size / n;
+  const probs = Array.from({ length: n }, () => new Array(n).fill(0));
+  $("runimg").disabled = true;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    status("사진 가리는 중 " + (i * n + j + 1) + " / " + (n * n));
+    try {
+      const r = await probsOf(fitCanvas(size, { x: Math.round(j * cell), y: Math.round(i * cell), w: Math.round(cell), h: Math.round(cell) }));
+      probs[i][j] = r.p[ci];
+    } catch (e) { probs[i][j] = NaN; }     // 가렸더니 자세를 아예 못 찾은 칸
+  }
+  imgResult = { n, ci, probs };
+  // 히트맵
+  const h = $("heat"), hc = h.getContext("2d"); hc.drawImage(fitCanvas(h.width, null), 0, 0);
+  const cs = h.width / n;
+  let maxd = 0;
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) { const d = isNaN(probs[i][j]) ? 0 : Math.max(0, baseProbs[ci] - probs[i][j]); if (d > maxd) maxd = d; }
+  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
+    const lost = isNaN(probs[i][j]); const d = lost ? 0 : Math.max(0, baseProbs[ci] - probs[i][j]);
+    hc.fillStyle = lost ? "rgba(90,90,90,0.55)" : "rgba(220,30,30," + (0.65 * (maxd > 0 ? d / maxd : 0)).toFixed(3) + ")"; hc.fillRect(j * cs, i * cs, cs, cs);
+    hc.strokeStyle = "rgba(255,255,255,0.8)"; hc.strokeRect(j * cs, i * cs, cs, cs);
+    hc.font = "bold 14px sans-serif"; hc.textAlign = "center"; hc.fillStyle = "#111"; hc.fillText(lost ? "자세 못 찾음" : d.toFixed(2), j * cs + cs / 2, i * cs + cs / 2 + 5);
+  }
+  let flat = []; for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) if (!isNaN(probs[i][j])) flat.push({ i, j, d: baseProbs[ci] - probs[i][j] });
+  flat.sort((a, b) => b.d - a.d); const top = flat.slice(0, 3);
+  const lostN = n * n - flat.length;
+  const rc = (x) => "(" + (x.i + 1) + "행 " + (x.j + 1) + "열)";
+  const kpPart = kpResult ? "" : " 실험 1도 돌려서 어느 관절인지 같이 보세요.";
+  const html = "<div class=\"note\">실험 2. 본 클래스 <b>" + labels[ci] + "</b>. 가장 많이 떨어진 칸 " + (top.length ? top.map(x => rc(x) + " " + x.d.toFixed(2)).join(", ") : "없음") +
+    (lostN ? ". 회색 칸 " + lostN + "개는 가렸더니 PoseNet 이 자세를 아예 못 찾은 곳입니다" : "") + "." + kpPart + "</div>" +
+    "<img src=\"" + h.toDataURL("image/png") + "\" style=\"max-width:480px;width:100%;border:1px solid #ced4da;margin-top:6px\">";
+  $("imgwrap").innerHTML = html;
+  $("runimg").disabled = false; $("csv").disabled = false; $("png").disabled = false;
+  status("실험 2 끝.");
+});
+
+// ---- 내려받기 ----
+$("csv").addEventListener("click", () => {
+  let s = "﻿";
+  if (kpResult) {
+    s += "실험1 관절 가리기,본클래스," + labels[kpResult.ci] + ",원본확률," + baseProbs[kpResult.ci].toFixed(4) + "\n관절,부위,검출점수,지웠을때확률,떨어진양\n";
+    kpResult.rows.forEach(r => { s += r.name + "," + r.group + "," + r.score.toFixed(4) + "," + r.p.toFixed(4) + "," + r.d.toFixed(4) + "\n"; });
+  }
+  if (imgResult) {
+    s += "\n실험2 사진 가리기,본클래스," + labels[imgResult.ci] + ",원본확률," + baseProbs[imgResult.ci].toFixed(4) + "\n행,열,가렸을때확률,떨어진양(음수는 올라감)\n";
+    for (let i = 0; i < imgResult.n; i++) for (let j = 0; j < imgResult.n; j++) {
+      const p = imgResult.probs[i][j];
+      s += (i + 1) + "," + (j + 1) + "," + (isNaN(p) ? "자세못찾음" : p.toFixed(4)) + "," + (isNaN(p) ? "" : (baseProbs[imgResult.ci] - p).toFixed(4)) + "\n";
+    }
+  }
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([s], { type: "text/csv" }));
+  a.download = "pose_occlusion_" + labels[parseInt($("cls").value)] + ".csv"; a.click();
+});
+$("png").addEventListener("click", () => {
+  const a = document.createElement("a"); a.href = $("view").toDataURL("image/png"); a.download = "pose_joints_" + labels[parseInt($("cls").value)] + ".png"; a.click();
+  if (imgResult) { const b = document.createElement("a"); b.href = $("heat").toDataURL("image/png"); b.download = "pose_heatmap_" + labels[imgResult.ci] + ".png"; setTimeout(() => b.click(), 300); }
+});
+
+loadModel();
+</script>
+</body>
+</html>
