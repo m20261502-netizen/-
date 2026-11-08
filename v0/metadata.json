@@ -1,0 +1,1 @@
+{"tfjsVersion":"1.7.4","tmVersion":"2.4.18","packageVersion":"0.8.4-alpha2","packageName":"@teachablemachine/image","timeStamp":"2026-11-08T09:43:52.489Z","userMetadata":{},"modelName":"angle classification(v0)","labels":["acute angle","right angle","obtuse angle","not angle"],"imageSize":224}
