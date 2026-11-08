@@ -110,7 +110,7 @@ text-align:center;
 
 <div class="eval-card">
 <h3>4. 틀린 사진</h3>
-<div id="eval-wrong">분석 후 틀린 사진이 표시됩니다.</div>
+<div id="eval-wrong" class="gallery">분석 후 틀린 사진이 표시됩니다.</div>
 </div>
 </div>
 </section>
@@ -302,7 +302,7 @@ renderSpecial();
  let files=[];
  input.onchange=e=>{files=[...e.target.files];count.textContent='선택한 사진 '+files.length+'장';};
  const load=file=>new Promise((res,rej)=>{const i=new Image();const url=URL.createObjectURL(file);i.onload=()=>{URL.revokeObjectURL(url);res(i)};i.onerror=err=>{URL.revokeObjectURL(url);rej(err)};i.src=url});
- // 한국어/영어 라벨을 공통 한국어 표준 클래스명으로 변환합니다.
+ // 한국어/영어 라벨을 공통 영어 클래스명으로 변환합니다.
  function normalizeClassLabel(raw){
   if(!raw) return unknownLabel;
   const key=String(raw).trim().toLowerCase().replace(/[_-]+/g,' ').replace(/\s+/g,' ');
@@ -314,13 +314,11 @@ renderSpecial();
   };
   return map[key]||unknownLabel;
  }
- // 파일명에서 확장자를 제거하고 첫 번째 "_" 앞부분을 실제 클래스명으로 읽습니다.
+ // 클래스명 뒤에 번호가 붙거나 구분자가 있어도 파일명에서 실제 클래스를 읽습니다.
  function actualFromName(name){
-  const base=String(name||'').replace(/\.[^.]+$/,'');
-  const splitAt=base.indexOf('_');
-  if(splitAt<1) return {actual:unknownLabel,isKnown:false};
-  const parsed=normalizeClassLabel(base.slice(0,splitAt));
-  return {actual:parsed,isKnown:parsed!==unknownLabel};
+  const base=String(name||'').replace(/\.[^.]+$/,'').toLowerCase().replace(/[_-]+/g,' ').replace(/\s+/g,' ').trim();
+  const label=labels.find(candidate=>base===candidate||new RegExp('^'+candidate.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\s*\\d.*$').test(base));
+  return {actual:label||unknownLabel,isKnown:Boolean(label)};
  }
  button.onclick=async()=>{
   if(!files.length)return alert('테스트 사진을 넣어주세요.');
@@ -347,7 +345,20 @@ renderSpecial();
   wrongBox.innerHTML='';
   const wrongResults=results.filter(r=>r.actual!==r.predicted);
   if(!wrongResults.length){wrongBox.textContent='이번 분석에서는 오분류가 없습니다.';return}
-  wrongResults.slice(0,8).forEach(r=>{let d=document.createElement('div');d.className='mistake';d.innerHTML='<b>'+r.file.name+'</b><br>실제: '+r.actual+' → AI: '+r.predicted+' ('+Math.round(r.confidence*100)+'%)';wrongBox.appendChild(d)});
+  wrongResults.forEach(r=>{
+   const card=document.createElement('div');
+   card.className='mistake';
+   const image=document.createElement('img');
+   image.src=URL.createObjectURL(r.file);
+   image.alt=r.file.name+' 오분류 사진';
+   image.loading='lazy';
+   const title=document.createElement('strong');
+   title.textContent=r.file.name;
+   const detail=document.createElement('p');
+   detail.textContent='실제: '+r.actual+' → AI: '+r.predicted+' ('+Math.round(r.confidence*100)+'%)';
+   card.append(image,title,detail);
+   wrongBox.appendChild(card);
+  });
  };
 })();
 </script>
