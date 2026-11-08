@@ -65,6 +65,29 @@ border:1px solid #ccc;
 padding:8px;
 text-align:center;
 }
+.teacher-evaluation .confusion-export{
+display:flex;
+justify-content:flex-end;
+margin-top:5cm;
+}
+.teacher-evaluation .confusion-export button{
+background:#2857c5;
+color:#fff;
+padding:12px 20px;
+border-radius:10px;
+box-shadow:0 4px 10px #2857c533;
+transition:background .2s ease,transform .2s ease,box-shadow .2s ease;
+}
+.teacher-evaluation .confusion-export button:hover:not(:disabled){
+background:#1d439f;
+transform:translateY(-1px);
+box-shadow:0 6px 14px #2857c555;
+}
+.teacher-evaluation .confusion-export button:disabled{
+background:#9fb3e8;
+color:#eef3ff;
+box-shadow:none;
+}
 @media(max-width:700px){
 .teacher-evaluation .eval-grid{grid-template-columns:1fr;}
 }
@@ -110,7 +133,7 @@ text-align:center;
 <div id="eval-matrix">
 <table><tr><th>실제＼예측</th></tr></table>
 </div>
-<button id="eval-export-confusion-csv" class="secondary" disabled>혼동행렬 CSV 내려받기</button>
+<div class="confusion-export"><button id="eval-export-confusion-csv" disabled>혼동행렬 CSV 내려받기</button></div>
 </div>
 
 <div class="eval-card">
