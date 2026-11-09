@@ -1,290 +1,359 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>가리기 실험기</title>
-<!-- 그래픽스개론 10주차. 티처블 머신 이미지 모델용 가리기(occlusion) 실험 도구.
-     같은 폴더의 model.json, metadata.json, weights.bin 을 읽습니다. 사진은 브라우저 밖으로 나가지 않습니다. -->
-<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
-<style>
-  body { font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; margin: 0; background: #f6f7f9; color: #1e1e1e; }
-  header { background: #073e7b; color: #fff; padding: 14px 22px; }
-  header h1 { margin: 0; font-size: 20px; }
-  header p { margin: 4px 0 0; font-size: 13px; opacity: .9; }
-  main { max-width: 1100px; margin: 18px auto; padding: 0 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  section { background: #fff; border: 1px solid #dee2e6; border-radius: 8px; padding: 14px 16px; }
-  section h2 { font-size: 15px; margin: 0 0 10px; color: #073e7b; }
-  label { font-size: 13px; display: block; margin: 6px 0 2px; }
-  select, input[type=number] { font-size: 14px; padding: 4px 6px; }
-  button { font-size: 14px; padding: 7px 14px; border: 0; border-radius: 6px; background: #1971c2; color: #fff; cursor: pointer; margin: 4px 6px 4px 0; }
-  button.gray { background: #868e96; }
-  button:disabled { background: #adb5bd; cursor: default; }
-  #status { font-size: 13px; color: #495057; margin-top: 6px; min-height: 18px; }
-  canvas { max-width: 100%; border: 1px solid #ced4da; background: #fff; }
-  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: flex-end; }
-  table { border-collapse: collapse; font-size: 12.5px; margin-top: 8px; }
-  td, th { border: 1px solid #dee2e6; padding: 4px 8px; text-align: center; }
-  th { background: #e7f5ff; }
-  .note { font-size: 12.5px; color: #495057; margin-top: 8px; line-height: 1.5; }
-  .big { font-size: 22px; font-weight: bold; color: #073e7b; }
-  .wide { grid-column: 1 / span 2; }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>이미지 가림 분석</title>
+  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+  <style>
+    :root { font-family: system-ui, -apple-system, "Malgun Gothic", sans-serif; color: #203047; background: #f4f7fb; }
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    main { width: min(1120px, calc(100% - 32px)); margin: 28px auto; }
+    .card { margin-bottom: 16px; padding: 22px; background: #fff; border: 1px solid #dce4ee; border-radius: 16px; box-shadow: 0 5px 18px #22334a0a; }
+    h1, h2 { margin: 0 0 12px; }
+    h1 { font-size: 26px; }
+    h2 { font-size: 19px; }
+    .muted { color: #637187; }
+    .row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin: 14px 0; }
+    button, input, select { font: inherit; }
+    button { padding: 10px 15px; border: 0; border-radius: 10px; color: #fff; background: #2857c5; cursor: pointer; }
+    button.secondary { background: #637187; }
+    button:disabled { background: #aab5c6; cursor: not-allowed; }
+    #status { padding: 10px 12px; border-radius: 10px; background: #eef3ff; }
+    .preview-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(224px, 1fr)); gap: 20px; align-items: start; }
+    canvas { display: block; width: min(100%, 480px); height: auto; border: 1px solid #dce4ee; border-radius: 10px; background: #fff; }
+    .probability { margin: 12px 0 0; font-size: 20px; font-weight: 700; }
+    .probability span { color: #2857c5; }
+    .summary { padding: 14px; border-radius: 10px; background: #f5f7fb; line-height: 1.65; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 560px; }
+    th, td { padding: 8px; border: 1px solid #dce4ee; text-align: center; white-space: nowrap; }
+    th { background: #f5f7fb; }
+    .help { margin: 8px 0 0; font-size: 13px; line-height: 1.55; }
+    code { background: #f0f3f8; padding: 2px 4px; border-radius: 4px; }
+  </style>
 </head>
 <body>
-<header>
-  <h1>가리기 실험기</h1>
-  <p>사진의 한 칸씩 회색으로 가리면서 고른 클래스의 확률이 얼마나 떨어지는지 봅니다. 많이 떨어지는 칸이 모델이 그 판정의 근거로 삼는 곳입니다.</p>
-</header>
-<main>
-  <section>
-    <h2>1. 모델과 사진</h2>
-    <div id="status">모델을 불러오는 중입니다...</div>
-    <div id="pick" style="margin:6px 0 10px">
-      <label>모델 파일 3개 고르기 (model.json, metadata.json, weights.bin 을 한꺼번에 선택)</label>
-      <input type="file" id="mfiles" accept=".json,.bin" multiple>
-      <div class="note">티처블 머신에서 내보내기(Tensorflow.js, 다운로드)로 받은 압축 파일을 풀면 나오는 세 파일입니다. 이 화면이 배포 주소의 model.json 과 같은 폴더에 있으면 자동으로 읽습니다.</div>
-    </div>
-    <label>사진 고르기 (한 장)</label>
-    <input type="file" id="file" accept="image/*" disabled>
-    <div class="row">
-      <div><label>볼 클래스 (예측 클래스로 맞춰짐)</label><select id="cls"></select></div>
-      <div><label>격자</label><select id="grid"><option>4</option><option selected>6</option><option>8</option></select></div>
-      <div><label>가림 칸 크기(격자 칸의 배수)</label><select id="patch"><option selected>1</option><option>2</option></select></div>
-    </div>
-    <div class="row" style="margin-top:8px">
-      <button id="run" disabled>실행</button>
-      <button id="csv" class="gray" disabled>CSV 내려받기</button>
-      <button id="png" class="gray" disabled>히트맵 그림 저장</button>
-    </div>
-    <div class="note">원본 확률 <span id="basep" class="big">-</span> <span id="basecls"></span></div>
-    <div class="note">틀린 사진은 모델이 예측한 클래스 그대로 두고 실행하세요. 모델이 무엇을 보고 그렇게 판정했는지가 나옵니다. 정답 클래스로 바꾸면 정답의 근거를 어디서 보고 있는지가 나오는데, 정답 확률이 원래 낮으면 떨어질 것이 없어 히트맵이 비어 보입니다.</div>
-    <div class="note">가림 색은 회색(128)입니다. 격자 6이면 36번 예측하므로 수십 초 걸릴 수 있습니다. 사진은 이 브라우저 안에서만 처리됩니다.</div>
-  </section>
-  <section>
-    <h2>2. 히트맵 (칸마다 확률이 떨어진 양)</h2>
-    <canvas id="heat" width="480" height="360"></canvas>
-    <div class="note">색이 진할수록 그 칸을 가렸을 때 고른 클래스의 확률이 많이 떨어진 것입니다. 숫자는 원본 확률에서 뺀 값입니다. 음수(가렸더니 올라감)는 0으로 표시합니다.</div>
-  </section>
-  <section class="wide">
-    <h2>3. 읽기</h2>
-    <div id="summary" class="note">실행하면 가장 많이 떨어진 칸 3개와 전체 판정을 요약합니다.</div>
-    <table id="tbl"></table>
-  </section>
-</main>
-<canvas id="work" style="display:none"></canvas>
-<script>
-// ---- 설정 ----
-const GRAY = 128;                    // 가림 색
-let model = null, labels = [], img = null, baseProbs = null, lastResult = null;
+  <main>
+    <section class="card">
+      <h1>이미지 가림 분석</h1>
+      <p class="muted">사진을 224×224로 맞춘 뒤 6×6 칸을 한 칸씩 회색(128)으로 가립니다. 모든 예측은 브라우저 안에서만 처리되며 사진은 외부로 전송하지 않습니다.</p>
+      <div id="status">model.json과 metadata.json을 불러오는 중입니다…</div>
+      <div class="row">
+        <input id="image-input" type="file" accept="image/*">
+        <label for="class-select">분석할 클래스:</label>
+        <select id="class-select" disabled></select>
+        <button id="run-button" type="button" disabled>6×6 분석하기</button>
+        <button id="csv-button" class="secondary" type="button" disabled>CSV 내려받기</button>
+      </div>
+      <p class="help muted">원본 확률을 먼저 확인한 뒤, 분석할 클래스를 선택하고 실행하세요. 처음에는 모델이 가장 높게 예측한 클래스가 선택됩니다.</p>
+    </section>
 
-const $ = (id) => document.getElementById(id);
-const status = (t) => { $("status").textContent = t; };
+    <section id="preview-panel" class="card" hidden>
+      <h2>원본과 분석 결과</h2>
+      <div class="preview-grid">
+        <div>
+          <h3>224×224 원본</h3>
+          <canvas id="original-canvas" width="224" height="224"></canvas>
+          <div class="probability">원본 확률: <span id="original-probability">-</span></div>
+        </div>
+        <div>
+          <h3>확률 하락 격자</h3>
+          <canvas id="heatmap-canvas" width="480" height="480"></canvas>
+          <p class="help muted">숫자는 원본 확률에서 가렸을 때의 확률을 뺀 값입니다. 빨간색이 진할수록 확률이 더 많이 떨어집니다.</p>
+        </div>
+      </div>
+    </section>
 
-// ---- 모델 불러오기 ----
-// 1) 같은 폴더의 model.json 을 먼저 시도하고, 2) 없으면(다른 주소에서 열었거나 파일을 더블 클릭해서 열었을 때) 모델 파일 3개를 직접 고르게 함
-function modelReady(m, how) {
-  model = m; labels = model.getClassLabels();
-  const sel = $("cls"); sel.innerHTML = "";
-  labels.forEach((l, i) => { const o = document.createElement("option"); o.value = i; o.textContent = l; sel.appendChild(o); });
-  $("file").disabled = false; baseProbs = null; $("run").disabled = true; $("basep").textContent = "-"; $("basecls").textContent = "";
-  status("모델을 불러왔습니다" + how + ". 클래스 " + labels.length + "개 (" + labels.join(", ") + ")");
-}
-// 모델 폴더 찾기. 티처블 머신 기본 코드는 ./my_model/ 에서 읽으므로 같은 폴더가 아닐 수 있다.
-// 1) index.html 이 모델을 읽는 경로를 찾아보고 2) 자주 쓰는 폴더 이름을 차례로 시도한다.
-const DEFAULT_BASES = ["./", "./my_model/", "./model/", "./models/", "./tm_model/", "./my-model/", "./public/", "./assets/", "./static/"];
-function normBase(b) {
-  b = b.trim().replace(/model\.json$/, "").replace(/metadata\.json$/, "");
-  if (!b) return "./";
-  if (!b.endsWith("/")) b += "/";
-  return b;
-}
-async function basesFromIndex() {
-  const found = [];
-  try {
-    const r = await fetch("./index.html", { cache: "no-store" });
-    if (!r.ok) return found;
-    const html = await r.text();
-    for (const m of html.matchAll(/(?:URL|url|modelURL|MODEL_URL|modelUrl|modelPath|MODEL_PATH|base|BASE)\s*=\s*["'`]([^"'`]{1,300}?)["'`]/g)) found.push(normBase(m[1]));
-    for (const m of html.matchAll(/["'`]([^"'`\s]{0,300}\/)(?:model|metadata)\.json["'`]/g)) found.push(normBase(m[1]));
-  } catch (e) { /* file:// 이거나 index.html 이 없음 */ }
-  return found;
-}
-async function findModelBase(tried) {
-  const bases = [];
-  for (const b of [...await basesFromIndex(), ...DEFAULT_BASES]) if (!bases.includes(b)) bases.push(b);
-  for (const b of bases) {
-    tried.push(b);
-    try {
-      const r = await fetch(b + "metadata.json", { cache: "no-store" });
-      if (!r.ok) continue;
-      const j = await r.json();
-      if (j && Array.isArray(j.labels)) return b;
-    } catch (e) { /* 다음 후보 */ }
-  }
-  return null;
-}
-async function loadModel() {
-  if (typeof tmImage === "undefined") {
-    status("tfjs 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하고 새로 고침하세요. 학교 망에서 cdn.jsdelivr.net 이 막혀 있으면 다른 망(휴대폰 핫스팟)으로 열어 보세요.");
-    return;
-  }
-  const tried = [];
-  const base = location.protocol === "file:" ? null : await findModelBase(tried);
-  if (!base) {
-    status(location.protocol === "file:"
-      ? "파일을 직접 열었습니다. 위에서 model.json, metadata.json, weights.bin 세 파일을 고르세요."
-      : "이 주소 아래에서 모델을 찾지 못했습니다 (찾아본 곳: " + tried.join(" ") + "). 위에서 세 파일을 직접 고르거나, 모델 파일 3개를 이 html 과 같은 폴더에 두고 다시 배포하세요.");
-    return;
-  }
-  try {
-    const m = await tmImage.load(base + "model.json", base + "metadata.json");
-    modelReady(m, base === "./" ? " (같은 폴더)" : " (" + base + ")");
-  } catch (e) {
-    status("모델 파일은 " + base + " 에 있는데 읽지 못했습니다 (" + e + "). model.json 과 weights.bin 이 같은 내보내기에서 나온 것인지 확인하거나, 위에서 세 파일을 직접 고르세요.");
-  }
-}
-$("mfiles").addEventListener("change", async (ev) => {
-  const fs = Array.from(ev.target.files);
-  const pickBy = (test) => fs.find(f => test(f.name.toLowerCase()));
-  const mj = pickBy(n => n === "model.json" || (n.endsWith(".json") && n.includes("model")));
-  const md = pickBy(n => n === "metadata.json" || (n.endsWith(".json") && n.includes("meta")));
-  const wb = pickBy(n => n.endsWith(".bin"));
-  if (!mj || !md || !wb) { status("세 파일을 한꺼번에 골라야 합니다. 지금 고른 것: " + fs.map(f => f.name).join(", ")); return; }
-  try {
-    status("모델을 읽는 중...");
-    const m = await tmImage.loadFromFiles(mj, wb, md);   // 브라우저 안에서만 읽음, 파일은 밖으로 나가지 않음
-    modelReady(m, " (고른 파일)");
-  } catch (e) {
-    status("모델 파일을 읽지 못했습니다. 티처블 머신에서 내보낸 세 파일이 맞는지 확인하세요. " + e);
-  }
-});
+    <section id="summary-panel" class="card" hidden>
+      <h2>가장 영향이 큰 칸</h2>
+      <div id="summary" class="summary"></div>
+    </section>
 
-// ---- 사진 읽기 ----
-$("file").addEventListener("change", async (ev) => {
-  const f = ev.target.files[0]; if (!f) return;
-  img = new Image();
-  img.onload = async () => {
-    URL.revokeObjectURL(img.src);
-    drawBase();
-    baseProbs = await predictCanvas(makeCanvas(null));
-    const top = argmax(baseProbs);
-    $("cls").value = top;                       // 모델이 예측한 클래스를 기본으로 고름
-    $("basep").textContent = baseProbs[top].toFixed(2);
-    $("basecls").textContent = "(모델 판정 " + labels[top] + " " + baseProbs[top].toFixed(2) + ")";
-    $("run").disabled = false;
-    status("사진을 읽었습니다. 볼 클래스를 확인하고 실행을 누르세요. 틀린 사진이면 예측된 클래스 그대로 두세요.");
-  };
-  img.src = URL.createObjectURL(f);
-});
-$("cls").addEventListener("change", () => { if (baseProbs) $("basep").textContent = baseProbs[$("cls").value].toFixed(2); });
+    <section id="table-panel" class="card" hidden>
+      <h2>칸별 확률</h2>
+      <div class="table-wrap"><table id="result-table"></table></div>
+    </section>
+  </main>
 
-function argmax(a) { let m = 0; for (let i = 1; i < a.length; i++) if (a[i] > a[m]) m = i; return m; }
+  <canvas id="work-canvas" width="224" height="224" hidden></canvas>
 
-// 사진을 정사각형(224) 캔버스에 가운데 맞춰 그리고, rect가 있으면 그 자리를 회색으로 가림
-function makeCanvas(rect) {
-  const c = $("work"); c.width = 224; c.height = 224;
-  const ctx = c.getContext("2d");
-  ctx.fillStyle = "#ffffff"; ctx.fillRect(0, 0, 224, 224);
-  const s = Math.min(img.width, img.height);                 // 티처블 머신처럼 가운데 정사각형으로 자름
-  const sx = (img.width - s) / 2, sy = (img.height - s) / 2;
-  ctx.drawImage(img, sx, sy, s, s, 0, 0, 224, 224);
-  if (rect) { ctx.fillStyle = "rgb(" + GRAY + "," + GRAY + "," + GRAY + ")"; ctx.fillRect(rect.x, rect.y, rect.w, rect.h); }
-  return c;
-}
-async function predictCanvas(c) {
-  const out = await model.predict(c);
-  const probs = new Array(labels.length).fill(0);
-  out.forEach((o) => { const i = labels.indexOf(o.className); if (i >= 0) probs[i] = o.probability; });
-  return probs;
-}
+  <script>
+    const MODEL_URL = './model.json';
+    const METADATA_URL = './metadata.json';
+    const GRID_SIZE = 6;
+    const IMAGE_SIZE = 224;
+    const MASK_VALUE = 128;
 
-// ---- 히트맵 캔버스 ----
-function drawBase() {
-  const h = $("heat"); const ctx = h.getContext("2d");
-  ctx.clearRect(0, 0, h.width, h.height);
-  const s = Math.min(img.width, img.height);
-  const sx = (img.width - s) / 2, sy = (img.height - s) / 2;
-  h.width = 480; h.height = 480;
-  ctx.drawImage(img, sx, sy, s, s, 0, 0, 480, 480);
-}
-function drawHeat(drops, n) {
-  drawBase();
-  const h = $("heat"); const ctx = h.getContext("2d");
-  const cell = 480 / n; const vmax = 0.5;
-  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) {
-    const d = Math.max(0, drops[i][j]);
-    const a = Math.min(0.75, d / vmax * 0.75);
-    ctx.fillStyle = "rgba(220, 38, 38," + a.toFixed(3) + ")";
-    ctx.fillRect(j * cell, i * cell, cell, cell);
-    ctx.strokeStyle = "rgba(255,255,255,0.6)"; ctx.strokeRect(j * cell, i * cell, cell, cell);
-    ctx.fillStyle = "#1e1e1e"; ctx.font = "bold " + Math.max(11, cell / 5) + "px sans-serif";
-    ctx.textAlign = "center"; ctx.textBaseline = "middle";
-    ctx.fillText(d.toFixed(2), j * cell + cell / 2, i * cell + cell / 2);
-  }
-}
+    const $ = id => document.getElementById(id);
+    const statusBox = $('status');
+    const imageInput = $('image-input');
+    const classSelect = $('class-select');
+    const runButton = $('run-button');
+    const csvButton = $('csv-button');
+    const originalCanvas = $('original-canvas');
+    const heatmapCanvas = $('heatmap-canvas');
+    const workCanvas = $('work-canvas');
 
-// ---- 실행 ----
-$("run").addEventListener("click", async () => {
-  if (!img || !model) return;
-  const n = parseInt($("grid").value), k = parseInt($("patch").value), ci = parseInt($("cls").value);
-  const cell = 224 / n;
-  const drops = Array.from({ length: n }, () => new Array(n).fill(0));
-  const probs = Array.from({ length: n }, () => new Array(n).fill(0));
-  $("run").disabled = true;
-  for (let i = 0; i < n; i++) {
-    for (let j = 0; j < n; j++) {
-      status("가리는 중 " + (i * n + j + 1) + " / " + (n * n));
-      const rect = { x: Math.round(j * cell), y: Math.round(i * cell), w: Math.round(cell * k), h: Math.round(cell * k) };
-      const p = await predictCanvas(makeCanvas(rect));
-      probs[i][j] = p[ci];
-      drops[i][j] = baseProbs[ci] - p[ci];
-      await new Promise(r => setTimeout(r, 0));
+    let model = null;
+    let labels = [];
+    let sourceImage = null;
+    let originalProbabilities = [];
+    let result = null;
+
+    function setStatus(message, error = false) {
+      statusBox.textContent = message;
+      statusBox.style.background = error ? '#fff0ee' : '#eef3ff';
+      statusBox.style.color = error ? '#b42318' : '';
     }
-  }
-  drawHeat(drops, n);
-  lastResult = { n, k, ci, probs, drops };
-  summarize(lastResult);
-  $("run").disabled = false; $("csv").disabled = false; $("png").disabled = false;
-  status("끝났습니다. 히트맵과 아래 요약을 보고 분석표에 적으세요.");
-});
 
-function summarize(r) {
-  const { n, drops, probs, ci } = r;
-  const flat = [];
-  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) flat.push({ i, j, d: drops[i][j], p: probs[i][j] });
-  flat.sort((a, b) => b.d - a.d);
-  const top = flat.slice(0, 3);
-  const maxd = top[0].d, meand = flat.reduce((s, x) => s + Math.max(0, x.d), 0) / flat.length;
-  let shape;
-  if (maxd < 0.1) shape = "어디를 가려도 확률이 거의 안 떨어집니다. 모델이 한 부분이 아니라 사진 전체의 색이나 밝기로 판정하고 있을 수 있습니다.";
-  else if (meand > maxd * 0.5) shape = "여러 칸에서 고르게 떨어집니다. 넓은 영역을 함께 보고 있습니다.";
-  else shape = "특정 칸에서만 크게 떨어집니다. 그 칸에 무엇이 있는지(물체인지 배경인지) 확인하세요.";
-  const rc = (x) => "(" + (x.i + 1) + "행 " + (x.j + 1) + "열)";
-  $("summary").innerHTML =
-    "본 클래스 <b>" + labels[ci] + "</b>, 원본 확률 <b>" + baseProbs[ci].toFixed(2) + "</b>. " +
-    "가장 많이 떨어진 칸 " + top.map(x => rc(x) + " " + x.d.toFixed(2)).join(", ") + ". " + shape;
-  let html = "<tr><th>행 \\ 열</th>" + Array.from({ length: n }, (_, j) => "<th>" + (j + 1) + "</th>").join("") + "</tr>";
-  for (let i = 0; i < n; i++) {
-    html += "<tr><th>" + (i + 1) + "</th>" + Array.from({ length: n }, (_, j) => "<td>" + probs[i][j].toFixed(2) + "</td>").join("") + "</tr>";
-  }
-  $("tbl").innerHTML = html;
-}
+    // 같은 폴더의 Teachable Machine 이미지 모델을 브라우저에서 직접 불러옵니다.
+    async function loadModel() {
+      try {
+        model = await tmImage.load(MODEL_URL, METADATA_URL);
+        labels = model.getClassLabels();
+        classSelect.innerHTML = labels.map((label, index) =>
+          `<option value="${index}">${escapeHtml(label)}</option>`
+        ).join('');
+        classSelect.disabled = false;
+        setStatus(`모델을 불러왔습니다. 클래스 ${labels.length}개`);
+      } catch (error) {
+        console.error(error);
+        setStatus('모델을 불러오지 못했습니다. index.html, model.json, metadata.json이 같은 폴더에 있는지 확인하세요.', true);
+      }
+    }
 
-// ---- 내려받기 ----
-$("csv").addEventListener("click", () => {
-  const { n, probs, drops, ci } = lastResult;
-  let s = "﻿본클래스," + labels[ci] + "\n원본확률," + baseProbs[ci].toFixed(4) + "\n행,열,가렸을때확률,떨어진양(음수는 올라감)\n";
-  for (let i = 0; i < n; i++) for (let j = 0; j < n; j++) s += (i + 1) + "," + (j + 1) + "," + probs[i][j].toFixed(4) + "," + drops[i][j].toFixed(4) + "\n";
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(new Blob([s], { type: "text/csv" })); a.download = "occlusion_" + labels[ci] + ".csv"; a.click();
-});
-$("png").addEventListener("click", () => {
-  const a = document.createElement("a"); a.href = $("heat").toDataURL("image/png"); a.download = "heatmap_" + labels[lastResult.ci] + ".png"; a.click();
-});
+    imageInput.addEventListener('change', async () => {
+      const file = imageInput.files && imageInput.files[0];
+      if (!file || !model) return;
+      runButton.disabled = true;
+      csvButton.disabled = true;
+      $('preview-panel').hidden = true;
+      $('summary-panel').hidden = true;
+      $('table-panel').hidden = true;
+      result = null;
+      setStatus('사진을 224×224로 준비하고 원본을 예측하는 중입니다…');
 
-loadModel();
-</script>
+      try {
+        sourceImage = await readImage(file);
+        drawSquareImage(originalCanvas, null);
+        originalProbabilities = await predict(drawSquareImage(workCanvas, null));
+        const bestIndex = argmax(originalProbabilities);
+        classSelect.value = String(bestIndex);
+        updateOriginalProbability();
+        $('preview-panel').hidden = false;
+        runButton.disabled = false;
+        setStatus('원본 예측을 완료했습니다. 분석할 클래스를 확인하고 실행하세요.');
+      } catch (error) {
+        console.error(error);
+        setStatus('사진을 읽거나 예측하지 못했습니다.', true);
+      }
+    });
+
+    classSelect.addEventListener('change', updateOriginalProbability);
+
+    function updateOriginalProbability() {
+      const index = Number(classSelect.value);
+      $('original-probability').textContent =
+        `${(originalProbabilities[index] * 100).toFixed(2)}% (${labels[index] || ''})`;
+    }
+
+    // 파일은 object URL로만 읽고 서버 업로드나 외부 전송을 하지 않습니다.
+    function readImage(file) {
+      return new Promise((resolve, reject) => {
+        const image = new Image();
+        const url = URL.createObjectURL(file);
+        image.onload = () => {
+          URL.revokeObjectURL(url);
+          resolve(image);
+        };
+        image.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error('이미지를 읽을 수 없습니다.'));
+        };
+        image.src = url;
+      });
+    }
+
+    // 원본을 가운데에서 잘라 224×224 정사각형으로 만들고, rect가 있으면 회색으로 덮습니다.
+    function drawSquareImage(canvas, rect, size = IMAGE_SIZE) {
+      canvas.width = size;
+      canvas.height = size;
+      const context = canvas.getContext('2d');
+      const side = Math.min(sourceImage.width, sourceImage.height);
+      const sx = (sourceImage.width - side) / 2;
+      const sy = (sourceImage.height - side) / 2;
+      context.drawImage(sourceImage, sx, sy, side, side, 0, 0, size, size);
+      if (rect) {
+        context.fillStyle = `rgb(${MASK_VALUE}, ${MASK_VALUE}, ${MASK_VALUE})`;
+        context.fillRect(rect.x, rect.y, rect.width, rect.height);
+      }
+      return canvas;
+    }
+
+    async function predict(canvas) {
+      const predictions = await model.predict(canvas);
+      return labels.map(label => {
+        const item = predictions.find(prediction => prediction.className === label);
+        return item ? item.probability : 0;
+      });
+    }
+
+    function argmax(values) {
+      return values.reduce((best, value, index) => value > values[best] ? index : best, 0);
+    }
+
+    // 36개 칸을 순서대로 가리고 각각 선택 클래스의 확률을 측정합니다.
+    runButton.addEventListener('click', async () => {
+      if (!sourceImage || !model) return;
+      const classIndex = Number(classSelect.value);
+      const originalProbability = originalProbabilities[classIndex];
+      const probabilities = [];
+      const drops = [];
+      const cellSize = IMAGE_SIZE / GRID_SIZE;
+
+      runButton.disabled = true;
+      csvButton.disabled = true;
+      setStatus('6×6 칸을 분석하는 중입니다…');
+      try {
+        for (let row = 0; row < GRID_SIZE; row += 1) {
+          probabilities[row] = [];
+          drops[row] = [];
+          for (let column = 0; column < GRID_SIZE; column += 1) {
+            setStatus(`가림 분석 중 ${row * GRID_SIZE + column + 1} / ${GRID_SIZE * GRID_SIZE}`);
+            const rect = {
+              x: column * cellSize,
+              y: row * cellSize,
+              width: cellSize,
+              height: cellSize
+            };
+            const prediction = await predict(drawSquareImage(workCanvas, rect));
+            probabilities[row][column] = prediction[classIndex];
+            drops[row][column] = originalProbability - prediction[classIndex];
+            await new Promise(resolve => setTimeout(resolve, 0));
+          }
+        }
+        result = { classIndex, originalProbability, probabilities, drops };
+        drawHeatmap(result);
+        renderSummary(result);
+        renderTable(result);
+        $('summary-panel').hidden = false;
+        $('table-panel').hidden = false;
+        csvButton.disabled = false;
+        setStatus('분석을 완료했습니다.');
+      } catch (error) {
+        console.error(error);
+        setStatus('가림 분석에 실패했습니다.', true);
+      } finally {
+        runButton.disabled = false;
+      }
+    });
+
+    // 사진 위에 칸별 하락량을 색과 숫자로 겹쳐 표시합니다.
+    function drawHeatmap(data) {
+      drawSquareImage(heatmapCanvas, null, 480);
+      const context = heatmapCanvas.getContext('2d');
+      const cellSize = heatmapCanvas.width / GRID_SIZE;
+      const maxDrop = Math.max(0, ...data.drops.flat());
+
+      context.textAlign = 'center';
+      context.textBaseline = 'middle';
+      context.font = 'bold 16px system-ui, sans-serif';
+      for (let row = 0; row < GRID_SIZE; row += 1) {
+        for (let column = 0; column < GRID_SIZE; column += 1) {
+          const drop = data.drops[row][column];
+          const intensity = maxDrop > 0 ? Math.max(0, drop) / maxDrop : 0;
+          context.fillStyle = `rgba(220, 38, 38, ${Math.min(0.78, 0.12 + intensity * 0.66)})`;
+          context.fillRect(column * cellSize, row * cellSize, cellSize, cellSize);
+          context.strokeStyle = 'rgba(255,255,255,.75)';
+          context.strokeRect(column * cellSize, row * cellSize, cellSize, cellSize);
+          context.fillStyle = intensity > 0.55 ? '#fff' : '#172033';
+          context.fillText(formatSignedPercent(drop), (column + 0.5) * cellSize, (row + 0.5) * cellSize);
+        }
+      }
+    }
+
+    function formatSignedPercent(value) {
+      return `${value >= 0 ? '+' : ''}${(value * 100).toFixed(1)}%`;
+    }
+
+    // 하락량이 큰 세 칸을 순위와 행·열로 요약합니다.
+    function renderSummary(data) {
+      const cells = data.drops.flatMap((row, rowIndex) =>
+        row.map((drop, columnIndex) => ({
+          row: rowIndex + 1,
+          column: columnIndex + 1,
+          drop,
+          probability: data.probabilities[rowIndex][columnIndex]
+        }))
+      ).sort((a, b) => b.drop - a.drop);
+      const top = cells.slice(0, 3);
+      $('summary').innerHTML =
+        `<strong>${escapeHtml(labels[data.classIndex])}</strong> 클래스의 원본 확률은 ` +
+        `<strong>${(data.originalProbability * 100).toFixed(2)}%</strong>입니다. ` +
+        `가장 많이 떨어진 칸은 ` +
+        top.map((cell, index) =>
+          `${index + 1}위 ${cell.row}행 ${cell.column}열 (${formatSignedPercent(cell.drop)})`
+        ).join(', ') + '입니다.';
+    }
+
+    function renderTable(data) {
+      let html = '<thead><tr><th>행/열</th>';
+      for (let column = 1; column <= GRID_SIZE; column += 1) html += `<th>${column}</th>`;
+      html += '</tr></thead><tbody>';
+      for (let row = 0; row < GRID_SIZE; row += 1) {
+        html += `<tr><th>${row + 1}</th>`;
+        for (let column = 0; column < GRID_SIZE; column += 1) {
+          html += `<td>${(data.probabilities[row][column] * 100).toFixed(2)}%` +
+            `<br><small>${formatSignedPercent(data.drops[row][column])}</small></td>`;
+        }
+        html += '</tr>';
+      }
+      $('result-table').innerHTML = html + '</tbody>';
+    }
+
+    // 분석 결과를 CSV로 만들어 브라우저에서 바로 다운로드합니다.
+    csvButton.addEventListener('click', () => {
+      if (!result) return;
+      const rows = [
+        ['클래스', labels[result.classIndex]],
+        ['원본 확률(%)', (result.originalProbability * 100).toFixed(4)],
+        [],
+        ['행', '열', '가렸을 때 확률(%)', '확률 하락(퍼센트포인트)']
+      ];
+      for (let row = 0; row < GRID_SIZE; row += 1) {
+        for (let column = 0; column < GRID_SIZE; column += 1) {
+          rows.push([
+            row + 1,
+            column + 1,
+            (result.probabilities[row][column] * 100).toFixed(4),
+            (result.drops[row][column] * 100).toFixed(4)
+          ]);
+        }
+      }
+      const csv = '\ufeff' + rows.map(row => row.map(csvEscape).join(',')).join('\r\n');
+      const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'occlusion-results.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+
+    function csvEscape(value) {
+      const text = String(value ?? '');
+      return /[",\r\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? '').replace(/[&<>"']/g, character => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[character]));
+    }
+
+    loadModel();
+  </script>
 </body>
 </html>
