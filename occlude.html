@@ -179,7 +179,7 @@
     function updateOriginalProbability() {
       const index = Number(classSelect.value);
       $('original-probability').textContent =
-        `${(originalProbabilities[index] * 100).toFixed(2)}% (${labels[index] || ''})`;
+        `${originalProbabilities[index].toFixed(2)} (${labels[index] || ''})`;
     }
 
     // 파일은 object URL로만 읽고 서버 업로드나 외부 전송을 하지 않습니다.
@@ -296,13 +296,13 @@
           context.strokeStyle = 'rgba(255,255,255,.75)';
           context.strokeRect(column * cellSize, row * cellSize, cellSize, cellSize);
           context.fillStyle = intensity > 0.55 ? '#fff' : '#172033';
-          context.fillText(formatSignedPercent(drop), (column + 0.5) * cellSize, (row + 0.5) * cellSize);
+          context.fillText(formatSignedDecimal(drop), (column + 0.5) * cellSize, (row + 0.5) * cellSize);
         }
       }
     }
 
-    function formatSignedPercent(value) {
-      return `${value >= 0 ? '+' : ''}${(value * 100).toFixed(1)}%`;
+    function formatSignedDecimal(value) {
+      return `${value >= 0 ? '+' : ''}${value.toFixed(2)}`;
     }
 
     // 하락량이 큰 세 칸을 순위와 행·열로 요약합니다.
@@ -318,10 +318,10 @@
       const top = cells.slice(0, 3);
       $('summary').innerHTML =
         `<strong>${escapeHtml(labels[data.classIndex])}</strong> 클래스의 원본 확률은 ` +
-        `<strong>${(data.originalProbability * 100).toFixed(2)}%</strong>입니다. ` +
+        `<strong>${data.originalProbability.toFixed(2)}</strong>입니다. ` +
         `가장 많이 떨어진 칸은 ` +
         top.map((cell, index) =>
-          `${index + 1}위 ${cell.row}행 ${cell.column}열 (${formatSignedPercent(cell.drop)})`
+          `${index + 1}위 ${cell.row}행 ${cell.column}열 (${formatSignedDecimal(cell.drop)})`
         ).join(', ') + '입니다.';
     }
 
@@ -332,8 +332,8 @@
       for (let row = 0; row < data.gridSize; row += 1) {
         html += `<tr><th>${row + 1}</th>`;
         for (let column = 0; column < data.gridSize; column += 1) {
-          html += `<td>${(data.probabilities[row][column] * 100).toFixed(2)}%` +
-            `<br><small>${formatSignedPercent(data.drops[row][column])}</small></td>`;
+          html += `<td>${data.probabilities[row][column].toFixed(2)}` +
+            `<br><small>${formatSignedDecimal(data.drops[row][column])}</small></td>`;
         }
         html += '</tr>';
       }
@@ -345,17 +345,17 @@
       if (!result) return;
       const rows = [
         ['클래스', labels[result.classIndex]],
-        ['원본 확률(%)', (result.originalProbability * 100).toFixed(4)],
+        ['원본 확률', result.originalProbability.toFixed(4)],
         [],
-        ['행', '열', '가렸을 때 확률(%)', '확률 하락(퍼센트포인트)']
+        ['행', '열', '가렸을 때 확률', '확률 하락']
       ];
       for (let row = 0; row < result.gridSize; row += 1) {
         for (let column = 0; column < result.gridSize; column += 1) {
           rows.push([
             row + 1,
             column + 1,
-            (result.probabilities[row][column] * 100).toFixed(4),
-            (result.drops[row][column] * 100).toFixed(4)
+            result.probabilities[row][column].toFixed(4),
+            result.drops[row][column].toFixed(4)
           ]);
         }
       }
