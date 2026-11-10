@@ -119,9 +119,13 @@ const CONFIG = { // 한국어 주석: 학생 화면에서 사용하는 수업 �
 <script>
 // ===== 티처블 머신 모델 불러오기 (이미지 프로젝트와 포즈 프로젝트 모두) =====
 // 1) 이 화면과 같은 주소 아래에서 모델 폴더를 찾고 2) 없으면 파일 3개를 직접 고르게 한다. 파일은 브라우저 밖으로 나가지 않는다.
+// 한국어 주석: 불러온 모델, 모델 종류, 클래스 이름을 저장하는 전역 상태입니다.
 const TM = { model: null, kind: null, labels: [] };
+// 한국어 주석: 모델 파일을 찾을 가능성이 있는 폴더 목록입니다.
 const TM_BASES = ["./", "./my_model/", "./model/", "./models/", "./tm_model/", "./my-model/", "./public/", "./assets/", "./static/"];
+// 한국어 주석: 모델 폴더 주소를 항상 슬래시로 끝나게 정리합니다.
 function tmNormBase(b) { b = b.trim().replace(/model\.json$/, "").replace(/metadata\.json$/, ""); if (!b) return "./"; if (!b.endsWith("/")) b += "/"; return b; }
+// 한국어 주석: index.html 안에 적힌 모델 폴더 주소도 찾아봅니다.
 async function tmBasesFromIndex() {
   const found = [];
   try {
@@ -132,6 +136,7 @@ async function tmBasesFromIndex() {
   } catch (e) { }
   return found;
 }
+// 한국어 주석: 여러 후보 폴더를 차례로 확인해 metadata.json을 찾습니다.
 async function tmFindBase(tried) {
   const bases = [];
   for (const b of [...await tmBasesFromIndex(), ...TM_BASES]) if (!bases.includes(b)) bases.push(b);
@@ -141,7 +146,9 @@ async function tmFindBase(tried) {
   }
   return null;
 }
+// 한국어 주석: 메타데이터를 보고 이미지 모델인지 포즈 모델인지 구분합니다.
 function tmKindOf(meta) { return /pose/i.test((meta && meta.packageName) || "") ? "pose" : "image"; }
+// 한국어 주석: 모델과 클래스 이름을 화면에서 사용할 상태로 저장합니다.
 function tmFinish(model, kind) {
   // 메타데이터에 종류가 없을 때를 대비해 입력 모양으로 한 번 더 확인 ([224,224,3] 이면 이미지, [14739] 같은 한 줄이면 포즈)
   const shp = (model.model && model.model.inputs && model.model.inputs[0]) ? model.model.inputs[0].shape : null;
@@ -149,11 +156,13 @@ function tmFinish(model, kind) {
   if (shp && shp.length === 2) kind = "pose";
   TM.model = model; TM.kind = kind; TM.labels = model.getClassLabels();
 }
+// 한국어 주석: 모델 종류에 맞는 티처블 머신 라이브러리를 선택합니다.
 function tmLib(kind) {
   if (kind === "pose") { if (typeof tmPose === "undefined") throw new Error("포즈 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하세요."); return tmPose; }
   if (typeof tmImage === "undefined") throw new Error("이미지 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하세요.");
   return tmImage;
 }
+// 한국어 주석: 웹 주소에 공개된 모델을 자동으로 불러옵니다.
 async function tmLoadAuto() {            // 반환: {ok, how, tried}
   const tried = [];
   if (location.protocol === "file:") return { ok: false, local: true, tried };
@@ -164,6 +173,7 @@ async function tmLoadAuto() {            // 반환: {ok, how, tried}
   tmFinish(m, kind);
   return { ok: true, how: hit.base === "./" ? "같은 폴더" : hit.base, tried };
 }
+// 한국어 주석: 선생님이 고른 모델 파일 세 개를 브라우저 안에서 불러옵니다.
 async function tmLoadFiles(fileList) {
   const fs = Array.from(fileList);
   const pick = (test) => fs.find(f => test(f.name.toLowerCase()));
@@ -176,6 +186,7 @@ async function tmLoadFiles(fileList) {
   const m = await tmLib(kind).loadFromFiles(mj, wb, md);
   tmFinish(m, kind);
 }
+// 한국어 주석: 사진 또는 직접 그린 캔버스를 모델에 넣어 확률을 얻습니다.
 async function tmPredict(el) {            // 반환: 클래스 순서대로 확률 배열
   let pred;
   if (TM.kind === "pose") { const r = await TM.model.estimatePose(el, false); pred = await TM.model.predict(r.posenetOutput); }
@@ -184,8 +195,10 @@ async function tmPredict(el) {            // 반환: 클래스 순서대로 확�
 }
 
 
+// 한국어 주석: id로 화면 요소를 짧게 찾기 위한 도우미입니다.
 const $ = (id) => document.getElementById(id);
 // 한국어 주석: 주소의 grade 미리보기만 허용하며 판정 기준은 CONFIG.threshold를 사용합니다.
+// 한국어 주석: 주소에 붙은 미리보기 옵션을 읽습니다.
 const qs = new URLSearchParams(location.search);
 const GRADE = ["low", "mid", "high"].includes(qs.get("grade")) ? qs.get("grade") : CONFIG.grade;
 const TH = CONFIG.threshold; // 한국어 주석: 판정 기준은 CONFIG의 활동지 테스트 값만 사용합니다.
@@ -207,6 +220,7 @@ draw.addEventListener("pointerup", (ev) => { if (!drawing || !drawStart) return;
 draw.addEventListener("pointercancel", () => { drawing = false; drawStart = null; renderDraw(); }); // 한국어 주석: 입력이 취소되면 미리보기 선을 없앱니다.
 clearDraw(); // 한국어 주석: 처음 열 때 분석 가능한 흰 캔버스를 준비합니다. // 한국어 주석: 처음 열 때 분석 가능한 흰 캔버스를 준비합니다.
 
+// 한국어 주석: 모델을 준비한 뒤 카메라·사진·그리기 버튼을 활성화합니다.
 function ready(how) {
   $("msg").textContent = "모델을 불러왔습니다 (" + how + "). 클래스: " + TM.labels.join(", ");
   const missing = TM.labels.filter(l => !CONFIG.classes[l]);
@@ -220,6 +234,7 @@ function ready(how) {
     else { $("msg").textContent = r.local ? "파일을 직접 열었습니다. 아래에서 모델 파일 3개를 고르세요." : "이 주소 아래에서 모델을 찾지 못했습니다. 아래에서 세 파일을 고르세요."; $("teacher").open = true; }
   } catch (e) { $("msg").textContent = "모델을 읽지 못했습니다. " + e.message; $("teacher").open = true; }
 })();
+// 한국어 주석: 선생님이 선택한 모델 파일을 읽기 시작합니다.
 $("mfiles").addEventListener("change", async (ev) => {
   try { $("msg").textContent = "모델을 읽는 중..."; await tmLoadFiles(ev.target.files); ready("고른 파일"); }
   catch (e) { $("msg").textContent = "모델을 읽지 못했습니다. " + e.message; }
@@ -230,6 +245,7 @@ $("clearDraw").addEventListener("click", clearDraw); // 한국어 주석: 지우
 $("analyzeDraw").addEventListener("click", async () => { $("drawbox").hidden = false; await judge(draw); }); // 한국어 주석: 그린 캔버스를 기존 분류 함수로 분석합니다.
 
 // ---------- 카메라 ----------
+// 한국어 주석: 후면 카메라를 우선 요청하고 사용할 수 없으면 안내합니다.
 $("cam").addEventListener("click", async () => {
   if (stream) { stopCam(); return; }
   if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { say("이 주소에서는 카메라를 쓸 수 없어요. 사진 고르기를 눌러 주세요.", true); return; }
@@ -242,12 +258,15 @@ $("cam").addEventListener("click", async () => {
       : e.name === "NotFoundError" ? "카메라를 찾지 못했어요. 사진 고르기를 눌러 주세요." : "카메라를 켜지 못했어요. 사진 고르기를 눌러 주세요.", true);
   }
 });
+// 한국어 주석: 카메라 영상과 연결된 자원을 정리합니다.
 function stopCam() { if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; $("video").hidden = true; $("shot").hidden = true; $("cam").textContent = "카메라 켜기"; }
+// 한국어 주석: 카메라 화면의 가운데 정사각형을 캡처해 분석합니다.
 $("shot").addEventListener("click", async () => {
   const v = $("video"), c = $("still"); const s = Math.min(v.videoWidth, v.videoHeight); if (!s) return;
   c.width = 480; c.height = 480; c.getContext("2d").drawImage(v, (v.videoWidth - s) / 2, (v.videoHeight - s) / 2, s, s, 0, 0, 480, 480);   // 화면에 보이는 가운데 정사각형만
   stopCam(); c.hidden = false; await judge(c);
 });
+// 한국어 주석: 사용자가 고른 사진을 캔버스에 옮겨 분석합니다.
 $("pick").addEventListener("change", (ev) => {
   const f = ev.target.files[0]; if (!f) return;
   const im = new Image();
@@ -260,15 +279,19 @@ $("pick").addEventListener("change", (ev) => {
 });
 
 // ---------- 판정과 문구 ----------
+// 한국어 주석: 카메라 상태처럼 분류 결과가 아닌 짧은 안내를 표시합니다.
 function say(text, plain) { const r = $("result"); r.hidden = false; r.className = "result" + (plain ? "" : " unsure"); r.innerHTML = "<p class=\"hint\" style=\"margin:0\"></p>"; r.firstChild.textContent = text; }
+// 한국어 주석: 사용자가 입력한 문자열을 HTML로 안전하게 표시합니다.
 function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+// 한국어 주석: 입력 화면을 분석하고 확률 기준에 맞는 학생용 결과를 만듭니다.
 async function judge(canvas) {
   if (!TM.model) { say("모델을 아직 못 불러왔어요. 선생님께 알려 주세요.", true); return; }
   let p;
   try { p = await tmPredict(canvas); } catch (e) { say("사진을 읽지 못했어요. 다시 찍어 볼까요?", true); return; }
+  // 한국어 주석: 확률이 높은 클래스부터 순서를 정합니다.
   const order = p.map((v, i) => i).sort((a, b) => p[b] - p[a]);
   const top = order[0], r = $("result"); r.hidden = false;
-  // 기준값보다 낮으면 답하지 않는다
+  // 한국어 주석: 기준값보다 낮으면 특정 각도라고 단정하지 않습니다.
   if (p[top] < TH) {
     r.className = "result unsure";
     r.innerHTML = "<div class=\"say\"><span class=\"icon\">🤔</span><b>" + esc(CONFIG.unsure.say) + "</b></div><ul class=\"tips\">" + CONFIG.unsure.tips.map(t => "<li>" + esc(t) + "</li>").join("") + "</ul>";
@@ -277,7 +300,7 @@ async function judge(canvas) {
     r.className = "result know";
     r.innerHTML = "<div class=\"say\"><b>" + esc(c.say) + "</b></div>" + (c.hint ? "<p class=\"hint\">" + esc(c.hint) + "</p>" : ""); // 한국어 주석: 요청한 문구와 학생 행동 안내만 결과에 표시합니다.
   }
-  // 학년군에 따라 AI의 생각을 얼마나 보여 줄지
+  // 한국어 주석: 숫자 대신 상위 세 클래스의 막대 길이로 비교하게 합니다.
   if (GRADE !== "low") {
     let h = "<div class=\"bars\" aria-label=\"AI의 생각\">";
     order.slice(0, 3).forEach((i, k) => {
