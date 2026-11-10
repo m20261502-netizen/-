@@ -45,9 +45,12 @@
         <input id="image-input" type="file" accept="image/*">
         <label for="class-select">분석할 클래스:</label>
         <select id="class-select" disabled></select>
+        <!-- 선택한 배율에 따라 한 칸의 가림 영역을 크게 만들 수 있습니다. -->
         <label for="grid-scale-select">가림 칸 크기:</label>
         <select id="grid-scale-select">
+          <!-- 224×224 이미지를 6×6으로 나누어 36개 칸을 분석합니다. -->
           <option value="1">1배 (6×6)</option>
+          <!-- 6×6 격자의 두 칸을 하나로 합쳐 3×3, 총 9개 칸을 분석합니다. -->
           <option value="2">2배 (3×3)</option>
         </select>
         <button id="run-button" type="button" disabled>6×6 분석하기</button>
@@ -88,6 +91,7 @@
   <script>
     const MODEL_URL = './model.json';
     const METADATA_URL = './metadata.json';
+    // 기본 격자는 6×6입니다. 2배를 선택하면 실제 분석 격자는 3×3이 됩니다.
     const BASE_GRID_SIZE = 6;
     const IMAGE_SIZE = 224;
     const MASK_VALUE = 128;
@@ -109,10 +113,12 @@
     let originalProbabilities = [];
     let result = null;
 
+    // 선택한 배율로 나눈 뒤, 실제로 분석할 행·열 개수를 계산합니다.
     function getGridSize() {
       return BASE_GRID_SIZE / Number(gridScaleSelect.value);
     }
 
+    // 배율을 바꾸면 실행 버튼에도 실제 분석 격자를 표시합니다.
     function updateRunButtonLabel() {
       const gridSize = getGridSize();
       runButton.textContent = `${gridSize}×${gridSize} 분석하기`;
@@ -221,15 +227,16 @@
       return values.reduce((best, value, index) => value > values[best] ? index : best, 0);
     }
 
-    // 36개 칸을 순서대로 가리고 각각 선택 클래스의 확률을 측정합니다.
+    // 각 칸을 순서대로 가리고 선택 클래스의 확률을 측정합니다.
+    // 1배는 36회(6×6), 2배는 9회(3×3) 예측을 수행합니다.
     runButton.addEventListener('click', async () => {
       if (!sourceImage || !model) return;
       const classIndex = Number(classSelect.value);
       const originalProbability = originalProbabilities[classIndex];
       const probabilities = [];
       const drops = [];
-      const gridSize = getGridSize();
-      const cellSize = IMAGE_SIZE / gridSize;
+      const gridSize = getGridSize(); // 현재 선택에 따른 행·열 수
+      const cellSize = IMAGE_SIZE / gridSize; // 224×224 이미지에서 한 칸의 실제 크기
 
       runButton.disabled = true;
       csvButton.disabled = true;
@@ -240,6 +247,7 @@
           drops[row] = [];
           for (let column = 0; column < gridSize; column += 1) {
             setStatus(`가림 분석 중 ${row * gridSize + column + 1} / ${gridSize * gridSize}`);
+            // 현재 칸의 위치와 크기를 정해 회색으로 가릴 영역을 만듭니다.
             const rect = {
               x: column * cellSize,
               y: row * cellSize,
@@ -252,6 +260,7 @@
             await new Promise(resolve => setTimeout(resolve, 0));
           }
         }
+        // 이후 히트맵, 표, CSV에서 같은 격자 크기를 사용하도록 결과에 저장합니다.
         result = { classIndex, originalProbability, gridSize, probabilities, drops };
         drawHeatmap(result);
         renderSummary(result);
