@@ -39,12 +39,17 @@
   <main>
     <section class="card">
       <h1>이미지 가림 분석</h1>
-      <p class="muted">사진을 224×224로 맞춘 뒤 6×6 칸을 한 칸씩 회색(128)으로 가립니다. 모든 예측은 브라우저 안에서만 처리되며 사진은 외부로 전송하지 않습니다.</p>
+      <p class="muted">사진을 224×224로 맞춘 뒤 선택한 크기의 칸을 한 칸씩 회색(128)으로 가립니다. 모든 예측은 브라우저 안에서만 처리되며 사진은 외부로 전송하지 않습니다.</p>
       <div id="status">model.json과 metadata.json을 불러오는 중입니다…</div>
       <div class="row">
         <input id="image-input" type="file" accept="image/*">
         <label for="class-select">분석할 클래스:</label>
         <select id="class-select" disabled></select>
+        <label for="grid-scale-select">가림 칸 크기:</label>
+        <select id="grid-scale-select">
+          <option value="1">1배 (6×6)</option>
+          <option value="2">2배 (3×3)</option>
+        </select>
         <button id="run-button" type="button" disabled>6×6 분석하기</button>
         <button id="csv-button" class="secondary" type="button" disabled>CSV 내려받기</button>
       </div>
@@ -83,7 +88,7 @@
   <script>
     const MODEL_URL = './model.json';
     const METADATA_URL = './metadata.json';
-    const GRID_SIZE = 6;
+    const BASE_GRID_SIZE = 6;
     const IMAGE_SIZE = 224;
     const MASK_VALUE = 128;
 
@@ -91,6 +96,7 @@
     const statusBox = $('status');
     const imageInput = $('image-input');
     const classSelect = $('class-select');
+    const gridScaleSelect = $('grid-scale-select');
     const runButton = $('run-button');
     const csvButton = $('csv-button');
     const originalCanvas = $('original-canvas');
@@ -102,6 +108,15 @@
     let sourceImage = null;
     let originalProbabilities = [];
     let result = null;
+
+    function getGridSize() {
+      return BASE_GRID_SIZE / Number(gridScaleSelect.value);
+    }
+
+    function updateRunButtonLabel() {
+      const gridSize = getGridSize();
+      runButton.textContent = `${gridSize}×${gridSize} 분석하기`;
+    }
 
     function setStatus(message, error = false) {
       statusBox.textContent = message;
@@ -153,6 +168,7 @@
     });
 
     classSelect.addEventListener('change', updateOriginalProbability);
+    gridScaleSelect.addEventListener('change', updateRunButtonLabel);
 
     function updateOriginalProbability() {
       const index = Number(classSelect.value);
@@ -212,17 +228,18 @@
       const originalProbability = originalProbabilities[classIndex];
       const probabilities = [];
       const drops = [];
-      const cellSize = IMAGE_SIZE / GRID_SIZE;
+      const gridSize = getGridSize();
+      const cellSize = IMAGE_SIZE / gridSize;
 
       runButton.disabled = true;
       csvButton.disabled = true;
-      setStatus('6×6 칸을 분석하는 중입니다…');
+      setStatus(`${gridSize}×${gridSize} 칸을 분석하는 중입니다…`);
       try {
-        for (let row = 0; row < GRID_SIZE; row += 1) {
+        for (let row = 0; row < gridSize; row += 1) {
           probabilities[row] = [];
           drops[row] = [];
-          for (let column = 0; column < GRID_SIZE; column += 1) {
-            setStatus(`가림 분석 중 ${row * GRID_SIZE + column + 1} / ${GRID_SIZE * GRID_SIZE}`);
+          for (let column = 0; column < gridSize; column += 1) {
+            setStatus(`가림 분석 중 ${row * gridSize + column + 1} / ${gridSize * gridSize}`);
             const rect = {
               x: column * cellSize,
               y: row * cellSize,
@@ -235,7 +252,7 @@
             await new Promise(resolve => setTimeout(resolve, 0));
           }
         }
-        result = { classIndex, originalProbability, probabilities, drops };
+        result = { classIndex, originalProbability, gridSize, probabilities, drops };
         drawHeatmap(result);
         renderSummary(result);
         renderTable(result);
@@ -255,14 +272,14 @@
     function drawHeatmap(data) {
       drawSquareImage(heatmapCanvas, null, 480);
       const context = heatmapCanvas.getContext('2d');
-      const cellSize = heatmapCanvas.width / GRID_SIZE;
+      const cellSize = heatmapCanvas.width / data.gridSize;
       const maxDrop = Math.max(0, ...data.drops.flat());
 
       context.textAlign = 'center';
       context.textBaseline = 'middle';
       context.font = 'bold 16px system-ui, sans-serif';
-      for (let row = 0; row < GRID_SIZE; row += 1) {
-        for (let column = 0; column < GRID_SIZE; column += 1) {
+      for (let row = 0; row < data.gridSize; row += 1) {
+        for (let column = 0; column < data.gridSize; column += 1) {
           const drop = data.drops[row][column];
           const intensity = maxDrop > 0 ? Math.max(0, drop) / maxDrop : 0;
           context.fillStyle = `rgba(220, 38, 38, ${Math.min(0.78, 0.12 + intensity * 0.66)})`;
@@ -301,11 +318,11 @@
 
     function renderTable(data) {
       let html = '<thead><tr><th>행/열</th>';
-      for (let column = 1; column <= GRID_SIZE; column += 1) html += `<th>${column}</th>`;
+      for (let column = 1; column <= data.gridSize; column += 1) html += `<th>${column}</th>`;
       html += '</tr></thead><tbody>';
-      for (let row = 0; row < GRID_SIZE; row += 1) {
+      for (let row = 0; row < data.gridSize; row += 1) {
         html += `<tr><th>${row + 1}</th>`;
-        for (let column = 0; column < GRID_SIZE; column += 1) {
+        for (let column = 0; column < data.gridSize; column += 1) {
           html += `<td>${(data.probabilities[row][column] * 100).toFixed(2)}%` +
             `<br><small>${formatSignedPercent(data.drops[row][column])}</small></td>`;
         }
@@ -323,8 +340,8 @@
         [],
         ['행', '열', '가렸을 때 확률(%)', '확률 하락(퍼센트포인트)']
       ];
-      for (let row = 0; row < GRID_SIZE; row += 1) {
-        for (let column = 0; column < GRID_SIZE; column += 1) {
+      for (let row = 0; row < result.gridSize; row += 1) {
+        for (let column = 0; column < result.gridSize; column += 1) {
           rows.push([
             row + 1,
             column + 1,
@@ -354,6 +371,7 @@
     }
 
     loadModel();
+    updateRunButtonLabel();
   </script>
 </body>
 </html>
