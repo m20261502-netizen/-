@@ -40,7 +40,7 @@
     <div class="note">파일 이름은 그대로 두고 뒤에 _rot12, _flip, _b70 같은 꼬리표만 붙입니다. 클래스_번호.jpg 규칙을 쓰고 있으면 밑줄 앞의 클래스 이름은 그대로 남습니다.</div>
   </section>
   <section>
-    <h2>2. 어떻게 바꿀까 (사진 1장마다 4장)</h2>
+    <h2>2. 어떻게 바꿀까 (사진 1장마다 6장)</h2>
     <div>
       <label><input type="checkbox" id="rot" checked> 회전 ±<input type="number" id="deg" value="12" min="1" max="45">° (4장)</label>
       <label><input type="checkbox" id="flip"> 좌우 반전 (1장)</label>
@@ -62,7 +62,7 @@
 </main>
 <script>
 const $ = (id) => document.getElementById(id);
-const AUGMENT_COUNT = 4; // 한국어 주석: 원본 사진 한 장마다 만들 증강 사진 수를 정합니다.
+const AUGMENT_COUNT = 6; // 한국어 주석: 원본 사진 한 장마다 만들 증강 사진 수를 정합니다.
 let results = [];   // {name, blob}
 
 function loadImage(file) {
@@ -114,12 +114,12 @@ $("make").addEventListener("click", async () => {
   if ($("flip").checked) ops.push({ type: "flip", tag: "flip" });
   if ($("bri").checked) { ops.push({ type: "bri", k: parseFloat($("b1").value), tag: "b" + Math.round(parseFloat($("b1").value) * 100) }, { type: "bri", k: parseFloat($("b2").value), tag: "b" + Math.round(parseFloat($("b2").value) * 100) }); }
   if (!ops.length) { $("status").textContent = "바꿀 방법을 하나 이상 고르세요."; return; }
-  const selectedOps = ops.slice(0, AUGMENT_COUNT); // 한국어 주석: 회전 네 장을 포함해 사진 한 장당 최대 네 장으로 제한합니다.
+  const selectedOps = ops.slice(0, AUGMENT_COUNT); // 한국어 주석: 회전 네 장과 밝기 두 장을 포함해 사진 한 장당 최대 여섯 장으로 제한합니다.
   results = []; $("grid").innerHTML = ""; $("make").disabled = true;
   let n = 0;
   for (const f of files) {
     const img = await loadImage(f);
-    for (const op of selectedOps) { // 한국어 주석: 원본 사진마다 네 개 이내의 변환만 적용합니다.
+    for (const op of selectedOps) { // 한국어 주석: 원본 사진마다 여섯 개 이내의 변환만 적용합니다.
       const c = transform(img, op);
       const blob = await toBlob(c);
       const name = tagName(f.name, op.tag);
