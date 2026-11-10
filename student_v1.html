@@ -47,7 +47,11 @@ const CONFIG = { // 한국어 주석: 학생 화면에서 사용하는 수업 �
   .frame { position:relative; background:#0d1b2f; border-radius:22px; overflow:hidden; aspect-ratio:1; }
   .frame video, .frame canvas { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
   .frame .empty { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#c9d6e8; font-size:17px; text-align:center; padding:24px; line-height:1.6; }
-  .btns { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .btns { display:grid; grid-template-columns:1fr 1fr; gap:10px; } /* 한국어 주석: 카메라·사진·그리기 버튼을 두 열로 배치합니다. */
+  .drawbox { background:#fff; border:2px solid var(--line); border-radius:22px; padding:14px; } /* 한국어 주석: 흰 배경의 직접 그리기 영역입니다. */
+  .drawtitle { margin:0 0 10px; font-size:18px; font-weight:700; } /* 한국어 주석: 그리기 안내를 크게 보여 줍니다. */
+  #draw { display:block; width:100%; height:300px; border:2px solid #CBD5E3; border-radius:14px; background:#fff; touch-action:none; cursor:crosshair; } /* 한국어 주석: 손가락과 마우스로 선을 그리는 캔버스입니다. */
+  .drawbtns { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px; } /* 한국어 주석: 지우기와 분석 버튼을 나란히 배치합니다. */
   button, .filebtn { font:inherit; font-size:18px; font-weight:700; min-height:56px; border-radius:16px; border:2px solid var(--navy); background:var(--navy); color:#fff; cursor:pointer;
                      display:flex; align-items:center; justify-content:center; text-align:center; padding:8px 12px; }
   button.shot { grid-column:1 / span 2; background:var(--bar); border-color:var(--bar); color:#2b2100; font-size:21px; }
@@ -86,9 +90,19 @@ const CONFIG = { // 한국어 주석: 학생 화면에서 사용하는 수업 �
     <div class="empty" id="empty">카메라를 켜거나<br>사진을 골라 주세요</div>
   </div>
 
+  <div class="drawbox" id="drawbox" hidden> <!-- 한국어 주석: 직접 그리기 영역을 처음에는 숨깁니다. -->
+    <p class="drawtitle">흰 칸에 직선으로 각도를 그려 보세요.</p> <!-- 한국어 주석: 학생에게 그리기 방법을 안내합니다. -->
+    <canvas id="draw" width="480" height="300" aria-label="각도 그리기 칸"></canvas> <!-- 한국어 주석: 분석에 사용할 그림 캔버스입니다. -->
+    <div class="drawbtns"> <!-- 한국어 주석: 그리기 조작 버튼 묶음입니다. -->
+      <button id="clearDraw" class="light">지우기</button> <!-- 한국어 주석: 캔버스를 흰색으로 되돌립니다. -->
+      <button id="analyzeDraw" class="shot">그림 확인하기</button> <!-- 한국어 주석: 그린 그림을 분류합니다. -->
+    </div>
+  </div>
+
   <div class="btns">
     <button id="cam" disabled>카메라 켜기</button>
     <label class="filebtn" id="pickwrap">사진 고르기<input type="file" id="pick" accept="image/*" disabled></label>
+    <button id="drawMode" class="light" disabled>직접 그리기</button>
     <button id="shot" class="shot" hidden>찰칵! 확인하기</button>
   </div>
 
@@ -178,13 +192,23 @@ const TH = CONFIG.threshold; // 한국어 주석: 판정 기준은 CONFIG의 활
 document.body.classList.add(GRADE);
 $("title").textContent = CONFIG.title; document.title = CONFIG.title;
 $("notice").textContent = CONFIG.notice;
-let stream = null;
+let stream = null; // 한국어 주석: 현재 카메라 스트림을 기억합니다.
+const draw = $("draw"); // 한국어 주석: 학생이 직접 그릴 캔버스를 가져옵니다.
+const drawContext = draw.getContext("2d"); // 한국어 주석: 캔버스에 선을 그릴 도구를 준비합니다.
+let drawing = false; // 한국어 주석: 현재 선을 그리고 있는지 기록합니다.
+function clearDraw() { drawContext.fillStyle = "#fff"; drawContext.fillRect(0, 0, draw.width, draw.height); } // 한국어 주석: 그리기 칸을 흰색으로 지웁니다.
+function drawPoint(ev) { const rect = draw.getBoundingClientRect(); return { x: (ev.clientX - rect.left) * draw.width / rect.width, y: (ev.clientY - rect.top) * draw.height / rect.height }; } // 한국어 주석: 화면 좌표를 캔버스 좌표로 바꿉니다.
+draw.addEventListener("pointerdown", (ev) => { drawing = true; draw.setPointerCapture(ev.pointerId); const point = drawPoint(ev); drawContext.beginPath(); drawContext.moveTo(point.x, point.y); }); // 한국어 주석: 손가락이나 마우스로 선을 시작합니다.
+draw.addEventListener("pointermove", (ev) => { if (!drawing) return; const point = drawPoint(ev); drawContext.lineTo(point.x, point.y); drawContext.strokeStyle = "#10233F"; drawContext.lineWidth = 6; drawContext.lineCap = "round"; drawContext.stroke(); }); // 한국어 주석: 움직이는 동안 진한 직선을 그립니다.
+draw.addEventListener("pointerup", () => { drawing = false; }); // 한국어 주석: 손가락이나 마우스를 떼면 선을 마칩니다.
+draw.addEventListener("pointercancel", () => { drawing = false; }); // 한국어 주석: 입력이 취소되어도 그리기 상태를 끝냅니다.
+clearDraw(); // 한국어 주석: 처음 열 때 분석 가능한 흰 캔버스를 준비합니다.
 
 function ready(how) {
   $("msg").textContent = "모델을 불러왔습니다 (" + how + "). 클래스: " + TM.labels.join(", ");
   const missing = TM.labels.filter(l => !CONFIG.classes[l]);
   $("cfg").textContent = "학년군 " + GRADE + ", 기준값 " + TH.toFixed(2) + (missing.length ? ". CONFIG 에 문구가 없는 클래스: " + missing.join(", ") + " (이름 그대로 보여 줌)" : ". 모든 클래스에 문구가 있습니다.");
-  $("cam").disabled = false; $("pick").disabled = false;
+  $("cam").disabled = false; $("pick").disabled = false; $("drawMode").disabled = false; // 한국어 주석: 모델을 준비한 뒤 직접 그리기도 활성화합니다.
 }
 (async () => {
   try {
@@ -197,6 +221,10 @@ $("mfiles").addEventListener("change", async (ev) => {
   try { $("msg").textContent = "모델을 읽는 중..."; await tmLoadFiles(ev.target.files); ready("고른 파일"); }
   catch (e) { $("msg").textContent = "모델을 읽지 못했습니다. " + e.message; }
 });
+
+$("drawMode").addEventListener("click", () => { stopCam(); $("video").hidden = true; $("still").hidden = true; $("empty").hidden = true; $("drawbox").hidden = false; $("result").hidden = true; clearDraw(); }); // 한국어 주석: 카메라를 멈추고 직접 그리기 화면을 엽니다.
+$("clearDraw").addEventListener("click", clearDraw); // 한국어 주석: 지우기 버튼으로 흰 캔버스를 다시 만듭니다.
+$("analyzeDraw").addEventListener("click", async () => { $("drawbox").hidden = false; await judge(draw); }); // 한국어 주석: 그린 캔버스를 기존 분류 함수로 분석합니다.
 
 // ---------- 카메라 ----------
 $("cam").addEventListener("click", async () => {
