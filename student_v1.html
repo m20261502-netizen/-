@@ -91,7 +91,7 @@ const CONFIG = { // 한국어 주석: 학생 화면에서 사용하는 수업 �
   </div>
 
   <div class="drawbox" id="drawbox" hidden> <!-- 한국어 주석: 직접 그리기 영역을 처음에는 숨깁니다. -->
-    <p class="drawtitle">칸의 중앙에 각이 위치할 수 있게 그려주세요.</p> <!-- 한국어 주석: 각을 캔버스 중앙에 그리도록 안내합니다. --> <!-- 한국어 주석: 학생에게 그리기 방법을 안내합니다. -->
+    <p class="drawtitle">칸의 중앙에 각이 위치할 수 있게 그려주세요.</p> <!-- 한국어 주석: 각을 캔버스 중앙에 그리도록 안내합니다. -->
     <canvas id="draw" width="480" height="300" aria-label="각도 그리기 칸"></canvas> <!-- 한국어 주석: 분석에 사용할 그림 캔버스입니다. -->
     <div class="drawbtns"> <!-- 한국어 주석: 그리기 조작 버튼 묶음입니다. -->
       <button id="clearDraw" class="light">지우기</button> <!-- 한국어 주석: 캔버스를 흰색으로 되돌립니다. -->
@@ -272,7 +272,8 @@ $("pick").addEventListener("change", (ev) => {
   const f = ev.target.files[0]; if (!f) return;
   const im = new Image();
   im.onload = async () => {
-    stopCam(); $("frame").hidden = false; $("drawbox").hidden = true; // 한국어 주석: 사진 선택 시 카메라 영역 위치를 사용합니다. const c = $("still"), s = Math.min(im.width, im.height);
+    stopCam(); $("frame").hidden = false; $("drawbox").hidden = true; // 한국어 주석: 사진 선택 시 카메라 영역 위치를 사용합니다.
+    const c = $("still"), s = Math.min(im.width, im.height);
     c.width = 480; c.height = 480; c.getContext("2d").drawImage(im, (im.width - s) / 2, (im.height - s) / 2, s, s, 0, 0, 480, 480);
     URL.revokeObjectURL(im.src); c.hidden = false; $("empty").hidden = true; await judge(c);
   };
