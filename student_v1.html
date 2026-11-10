@@ -171,7 +171,7 @@ async function tmPredict(el) {            // 반환: 클래스 순서대로 확�
 
 
 const $ = (id) => document.getElementById(id);
-// 주소 뒤에 ?grade=low 나 ?th=0.8 을 붙이면 미리보기용으로 잠깐 바꿔 볼 수 있다 (코드의 CONFIG 는 그대로)
+// 한국어 주석: 주소의 grade 미리보기만 허용하며 판정 기준은 CONFIG.threshold를 사용합니다.
 const qs = new URLSearchParams(location.search);
 const GRADE = ["low", "mid", "high"].includes(qs.get("grade")) ? qs.get("grade") : CONFIG.grade;
 const TH = CONFIG.threshold; // 한국어 주석: 판정 기준은 CONFIG의 활동지 테스트 값만 사용합니다.
@@ -251,7 +251,7 @@ async function judge(canvas) {
     let h = "<div class=\"bars\" aria-label=\"AI의 생각\">";
     order.slice(0, 3).forEach((i, k) => {
       const name = (CONFIG.classes[TM.labels[i]] ? CONFIG.classes[TM.labels[i]].say.replace(/ 같아요$/, "") : TM.labels[i]);
-      h += "<div class=\"barrow" + (k === 0 ? " top" : "") + "\"><span>" + esc(name) + "</span><div class=\"track\"><div class=\"fill\" style=\"width:" + Math.round(p[i] * 100) + "%\"></div></div><span>" + (GRADE === "high" ? Math.round(p[i] * 100) + "%" : "") + "</span></div>";
+      h += "<div class=\"barrow" + (k === 0 ? " top" : "") + "\"><span>" + esc(name) + "</span><div class=\"track\"><div class=\"fill\" style=\"width:" + Math.round(p[i] * 100) + "%\"></div></div><span>" + "</span></div>"; // 한국어 주석: 확률 숫자 없이 막대 길이로만 비교하게 합니다.
     });
     h += "</div>";
     if (GRADE === "high") h += "<div class=\"q\">" + esc(CONFIG.question) + "</div>";
