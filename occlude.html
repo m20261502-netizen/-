@@ -176,6 +176,7 @@
     classSelect.addEventListener('change', updateOriginalProbability);
     gridScaleSelect.addEventListener('change', updateRunButtonLabel);
 
+    // 모델 확률은 0~1 범위의 소수이므로 퍼센트(100을 곱한 값)로 바꾸지 않고 표시합니다.
     function updateOriginalProbability() {
       const index = Number(classSelect.value);
       $('original-probability').textContent =
@@ -301,6 +302,7 @@
       }
     }
 
+    // 확률 하락량도 0~1 범위의 소수로 표시합니다. 예: 0.221 -> +0.22
     function formatSignedDecimal(value) {
       return `${value >= 0 ? '+' : ''}${value.toFixed(2)}`;
     }
@@ -326,6 +328,7 @@
     }
 
     function renderTable(data) {
+      // 표의 확률과 하락량은 모두 소수 형식으로 표시합니다. 퍼센트 기호를 붙이지 않습니다.
       let html = '<thead><tr><th>행/열</th>';
       for (let column = 1; column <= data.gridSize; column += 1) html += `<th>${column}</th>`;
       html += '</tr></thead><tbody>';
@@ -340,7 +343,7 @@
       $('result-table').innerHTML = html + '</tbody>';
     }
 
-    // 분석 결과를 CSV로 만들어 브라우저에서 바로 다운로드합니다.
+    // 분석 결과를 소수 확률 형식의 CSV로 만들어 브라우저에서 바로 다운로드합니다.
     csvButton.addEventListener('click', () => {
       if (!result) return;
       const rows = [
