@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>세 묶음 겹침 검사</title>
+<!-- 그래픽스개론 12주차. 학습 업로드용, 고정 개발용, 최종 테스트용 사진 사이에
+     같은 사진이 섞여 있는지 찾는 화면.
+     모델을 쓰지 않는다. 사진은 이 브라우저 안에서만 읽고 저장하거나 보내지 않는다. 외부 라이브러리 없음. -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#EEF1F5; --card:#FFFFFF; --ink:#10233F; --navy:#0B3A75; --line:#D5DCE6; --mute:#5C6B80;
+          --ok:#0E8A7B; --bad:#D1345B; --unsure:#8A94A3; --bar:#F2B90F; --soft:#F6F8FB; }
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body { margin:0; background:var(--bg); color:var(--ink); font-family:"IBM Plex Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif; font-size:15px; line-height:1.6; }
+  a { color:var(--navy); }
+  .top { background:var(--navy); color:#fff; padding:18px 24px 16px; }
+  .top .in { max-width:1180px; margin:0 auto; display:flex; gap:18px; align-items:baseline; flex-wrap:wrap; }
+  .top h1 { margin:0; font-size:22px; font-weight:700; letter-spacing:-0.01em; }
+  .top p { margin:0; font-size:13.5px; opacity:.88; flex:1 1 420px; }
+  .top a { color:#fff; font-size:13px; opacity:.85; }
+  main { max-width:1180px; margin:20px auto 48px; padding:0 16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px 18px; }
+  h2 { font-size:16px; margin:0 0 10px; font-weight:700; color:var(--navy); }
+  h3 { font-size:14px; margin:14px 0 6px; font-weight:700; }
+  label { display:block; font-size:13px; margin:10px 0 4px; font-weight:600; }
+  .note { font-size:13px; color:var(--mute); margin:6px 0 0; }
+  .status { font-size:13.5px; padding:8px 10px; background:var(--soft); border-left:4px solid var(--navy); border-radius:4px; margin:8px 0; }
+  .warn { background:#FFF7DB; border:1px solid #E0A800; border-radius:6px; padding:8px 10px; font-size:13px; margin-top:8px; }
+  .warn:empty { display:none; }
+  [hidden] { display:none !important; }   /* display 를 따로 준 요소도 hidden 이면 확실히 감춤 */
+  button, .btn { font:inherit; font-size:14px; font-weight:600; padding:8px 14px; border-radius:7px; border:1px solid var(--navy); background:var(--navy); color:#fff; cursor:pointer; }
+  button.ghost { background:#fff; color:var(--navy); }
+  button:disabled { background:#B8C2D0; border-color:#B8C2D0; color:#fff; cursor:default; }
+  button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible { outline:3px solid var(--bar); outline-offset:2px; }
+  input[type=file] { font-size:13.5px; max-width:100%; }
+  table { border-collapse:collapse; width:100%; font-size:13.5px; font-variant-numeric:tabular-nums; }
+  th, td { border-bottom:1px solid var(--line); padding:6px 8px; text-align:right; }
+  th { background:var(--soft); font-weight:600; text-align:right; }
+  th:first-child, td:first-child { text-align:left; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  @media (prefers-reduced-motion: reduce) { * { transition:none !important; animation:none !important; } }
+
+  .sets { display:grid; grid-template-columns: repeat(3, 1fr); gap:14px; }
+  @media (max-width: 860px) { .sets { grid-template-columns: 1fr; } }
+  .set { border:1px solid var(--line); border-radius:8px; padding:12px 14px; background:var(--soft); }
+  .set h3 { margin:0 0 2px; font-size:15px; color:var(--navy); }
+  .set .who { font-size:12.5px; color:var(--mute); margin:0 0 6px; }
+  .set .cnt { font-size:13.5px; margin-top:8px; font-weight:600; }
+  .reads { display:grid; grid-template-columns: repeat(3, 1fr); gap:12px; margin:6px 0 4px; }
+  @media (max-width: 700px) { .reads { grid-template-columns: 1fr; } }
+  .read { border-top:4px solid var(--unsure); padding:8px 2px 2px; }
+  .read b { display:block; font-size:26px; line-height:1.2; font-variant-numeric:tabular-nums; }
+  .read span { font-size:13px; color:var(--mute); }
+  .read.ok { border-top-color:var(--ok); } .read.ok b { color:var(--ok); }
+  .read.bad { border-top-color:var(--bad); } .read.bad b { color:var(--bad); }
+  .slider { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size:13.5px; }
+  .slider input[type=range] { width:240px; accent-color: var(--bar); }
+  .pairs { display:grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap:10px; margin-top:10px; }
+  .pair { border:1px solid var(--line); border-radius:8px; padding:10px; background:#fff; }
+  .pair .head { display:flex; justify-content:space-between; align-items:center; gap:8px; margin-bottom:8px; font-size:12.5px; color:var(--mute); font-variant-numeric:tabular-nums; }
+  .pair .two { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .pair figure { margin:0; min-width:0; }
+  .pair img { width:100%; aspect-ratio:4 / 3; object-fit:cover; border-radius:5px; background:#E3E8EF; display:block; }
+  .pair figcaption { font-size:12.5px; line-height:1.4; margin-top:4px; overflow-wrap:anywhere; }
+  .pair .kind { display:inline-block; font-size:12px; font-weight:700; padding:1px 8px; border-radius:10px; color:#fff; background:var(--bad); }
+  .pair .kind.near { background:#B26A00; } .pair .kind.flip { background:var(--navy); }
+  .pair .tag { color:var(--mute); }
+  textarea { width:100%; min-height:190px; font:13px/1.5 "IBM Plex Sans KR","Malgun Gothic",sans-serif; padding:8px; border:1px solid var(--line); border-radius:8px; }
+  progress { width:220px; height:10px; vertical-align:middle; }
+  .cannot { margin:0; padding-left:18px; font-size:13.5px; }
+  .cannot li { margin-bottom:4px; }
+</style>
+</head>
+<body>
+<div class="top"><div class="in">
+  <h1>세 묶음 겹침 검사</h1>
+  <p>학습 업로드용, 고정 개발용, 최종 테스트용 사진 사이에 같은 사진이 섞여 있는지 찾습니다. 사진은 이 브라우저 안에서만 읽고 어디에도 보내지 않습니다. 모델에 넣는 것이 아니므로 최종 테스트용 사진을 넣어도 최종 테스트를 한 것이 아닙니다.</p>
+</div></div>
+<main>
+  <section class="card">
+    <h2>1. 세 묶음의 사진 넣기</h2>
+    <div class="sets">
+      <div class="set">
+        <h3>학습 업로드용</h3><p class="who">티처블 머신에 올린 사진. 증강본도 같이</p>
+        <label for="f0">사진 여러 장</label><input type="file" id="f0" accept="image/*" multiple>
+        <label for="d0">또는 폴더째로</label><input type="file" id="d0" webkitdirectory multiple>
+        <div class="cnt" id="c0">아직 넣지 않음</div>
+      </div>
+      <div class="set">
+        <h3>고정 개발용</h3><p class="who">eval.html 에 넣어 온 사진</p>
+        <label for="f1">사진 여러 장</label><input type="file" id="f1" accept="image/*" multiple>
+        <label for="d1">또는 폴더째로</label><input type="file" id="d1" webkitdirectory multiple>
+        <div class="cnt" id="c1">아직 넣지 않음</div>
+      </div>
+      <div class="set">
+        <h3>최종 테스트용</h3><p class="who">아직 모델에 넣지 않은 사진</p>
+        <label for="f2">사진 여러 장</label><input type="file" id="f2" accept="image/*" multiple>
+        <label for="d2">또는 폴더째로</label><input type="file" id="d2" webkitdirectory multiple>
+        <div class="cnt" id="c2">아직 넣지 않음</div>
+      </div>
+    </div>
+    <p class="note">폴더째로 넣으면 그 안의 클래스별 폴더까지 한꺼번에 읽습니다. 두 묶음만 넣어도 검사할 수 있습니다. 폴더를 고를 때 브라우저가 파일을 업로드하겠느냐고 물을 수 있습니다. 이 화면이 사진을 읽도록 허락한다는 뜻이고, 사진은 인터넷으로 나가지 않습니다.</p>
+  </section>
+
+  <section class="card" style="margin-top:16px">
+    <h2>2. 검사하기</h2>
+    <div class="row">
+      <button id="run" disabled>검사 실행</button>
+      <span id="progress" class="note" style="margin:0">묶음을 두 개 이상 넣으면 실행할 수 있습니다.</span>
+      <progress id="bar" max="1" value="0" hidden></progress>
+    </div>
+    <div class="slider" style="margin-top:12px">
+      <label for="th" style="margin:0">같은 사진으로 볼 기준</label>
+      <span class="note" style="margin:0">느슨하게</span>
+      <input type="range" id="th" min="0.85" max="0.99" step="0.01" value="0.95">
+      <span class="note" style="margin:0">엄격하게</span>
+      <b id="thval">0.95</b>
+    </div>
+    <p class="note">두 사진을 작게 줄인 뒤 밝고 어두운 무늬가 얼마나 같은지를 0에서 1 사이 숫자로 냅니다. 1이면 같은 사진입니다. 기준을 느슨하게 하면 거의 같은 자리에서 이어 찍은 사진까지 후보로 나오고, 서로 다른 사진이 섞여 나올 수도 있습니다.</p>
+  </section>
+
+  <section class="card" style="margin-top:16px" id="resultCard" hidden>
+    <h2>검사 결과</h2>
+    <div class="reads">
+      <div class="read" id="r01"><b>-</b><span>학습 업로드용 ↔ 고정 개발용</span></div>
+      <div class="read" id="r02"><b>-</b><span>학습 업로드용 ↔ 최종 테스트용</span></div>
+      <div class="read" id="r12"><b>-</b><span>고정 개발용 ↔ 최종 테스트용</span></div>
+    </div>
+    <div class="status" id="advice"></div>
+    <div class="warn" id="augwarn"></div>
+    <div class="warn" id="skipped"></div>
+    <div class="pairs" id="pairs"></div>
+    <p class="note" id="more"></p>
+  </section>
+
+  <section class="card" style="margin-top:16px" id="reportCard" hidden>
+    <h2>결과 글</h2>
+    <p class="note" style="margin-top:0">아래 글을 복사해 기말 보고서 3-3 독립성 점검에 붙이고, 맨 끝 줄에 겹친 사진을 어떻게 했는지 적으세요.</p>
+    <textarea id="report" readonly></textarea>
+    <div class="row" style="margin-top:8px"><button id="copy">결과 복사</button><span class="note" id="copied" style="margin:0"></span></div>
+  </section>
+
+  <section class="card" style="margin-top:16px">
+    <h2>이 검사로 찾는 것과 못 찾는 것</h2>
+    <ul class="cannot">
+      <li>찾는 것. 같은 파일, 크기를 줄이거나 다시 저장한 사진, 밝기를 바꾼 사진, 좌우로 뒤집은 사진. 10주차 증강 도구로 돌려서 만든 사진은 파일 이름 끝의 꼬리표(_rot12 같은 것)를 보고 찾습니다.</li>
+      <li>기준을 느슨하게 하면 후보로 나오는 것. 거의 같은 자리에서 이어 찍은 사진.</li>
+      <li>못 찾는 것. 같은 물건을 다른 각도나 다른 자리에서 찍은 사진, 손으로 돌려 놓은 사진, 가장자리를 많이 잘라 낸 사진. 이것은 언제 어디서 찍었는지 적어 둔 기록으로 확인합니다.</li>
+      <li>같은 양식지나 같은 배경 위에서 찍은 사진은 서로 다른 사진인데도 후보로 나올 수 있습니다. 후보는 사진을 눈으로 보고 정합니다.</li>
+      <li>겹친 사진을 빼거나 바꾸는 일은 최종 테스트를 하기 전에만 합니다. 모델 결과를 본 뒤에 최종 테스트용 사진을 바꾸면 그 묶음을 이미 쓴 것이 됩니다.</li>
+    </ul>
+  </section>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const NAMES = ["학습 업로드용", "고정 개발용", "최종 테스트용"];
+const SHORT = ["학습", "개발", "최종"];
+const N = 32;            // 사진 한 장을 N×N 칸으로 줄여 견줌
+const M = 256;           // 먼저 M×M 으로 그린 뒤 8×8 픽셀씩 평균을 내어 N×N 칸으로 만듦
+const R = 4;             // 둘레 R 칸까지의 평균을 빼서 조명과 그림자의 영향을 덜어 냄
+const MIN_T = 0.85;      // 이 값보다 낮은 쌍은 기록하지 않음. 기준 막대의 가장 느슨한 값과 같음
+const sets = [[], [], []];          // 묶음별 파일 목록
+let sigs = [null, null, null];      // 묶음별 서명 목록
+let found = [];                     // 같은 정도가 MIN_T 이상인 쌍 전부. 기준을 바꾸면 여기서 골라냄
+let pairs = [];                     // 지금 기준으로 고른 쌍
+let urls = [];                      // 화면에 그린 미리 보기 주소 (다시 그릴 때 해제)
+let ready = false;                  // 지금 넣은 사진을 모두 읽고 견주었는지
+
+function isImage(f) { return /^image\//.test(f.type) || /\.(jpe?g|png|webp|gif|bmp|jfif)$/i.test(f.name); }
+function shortName(f) {             // 폴더째로 넣었으면 '클래스 폴더/파일 이름'
+  const p = (f.webkitRelativePath || "").split("/");
+  return p.length >= 2 ? p.slice(-2).join("/") : f.name;
+}
+// 10주차 증강 도구가 파일 이름 끝에 붙이는 꼬리표. _rot12, _rotm12, _flip, _b70, _b130
+function augTag(f) {
+  const i = f.name.lastIndexOf("."), stem = i > 0 ? f.name.slice(0, i) : f.name;
+  const m = /_(?:(rotm?)(\d+(?:\.\d+)?)|(flip)|b(\d{2,3}))$/i.exec(stem);
+  if (!m) return null;
+  if (m[1]) return { type: "rot", deg: (m[1].toLowerCase() === "rotm" ? -1 : 1) * parseFloat(m[2]) };
+  if (m[3]) return { type: "flip" };
+  const k = parseInt(m[4], 10); return k >= 30 && k <= 200 ? { type: "bri" } : null;
+}
+function take(k, list) {
+  sets[k] = Array.from(list).filter(isImage);
+  if (k === 0) sigs = [null, null, null]; else sigs[k] = null;   // 학습 묶음이 바뀌면 돌려 볼 각도가 달라지므로 모두 다시 읽음
+  ready = false;
+  $("resultCard").hidden = true; $("reportCard").hidden = true;   // 앞의 결과는 지금 묶음과 맞지 않음
+  $("c" + k).textContent = sets[k].length ? sets[k].length + "장" : list.length ? "사진을 찾지 못했습니다" : "아직 넣지 않음";
+  const filled = sets.filter(s => s.length).length;
+  $("run").disabled = filled < 2;
+  $("progress").textContent = filled < 2 ? "묶음을 두 개 이상 넣으면 실행할 수 있습니다." : "실행을 누르면 " + sets.reduce((a, s) => a + s.length, 0) + "장을 읽습니다.";
+}
+[0, 1, 2].forEach(k => {
+  $("f" + k).addEventListener("change", ev => { $("d" + k).value = ""; take(k, ev.target.files); });
+  $("d" + k).addEventListener("change", ev => { $("f" + k).value = ""; take(k, ev.target.files); });
+});
+
+function loadImg(file) {
+  return new Promise((res, rej) => {
+    const u = URL.createObjectURL(file), im = new Image();
+    im.onload = async () => { try { if (im.decode) await im.decode(); } catch (e) {} URL.revokeObjectURL(u); res(im); };
+    im.onerror = () => { URL.revokeObjectURL(u); rej(new Error("사진을 열 수 없음")); };
+    im.src = u;
+  });
+}
+function mk() { const c = document.createElement("canvas"); return [c, c.getContext("2d", { willReadFrequently: true })]; }
+const [cv, g] = mk(); cv.width = M; cv.height = M;
+const scratch = [mk(), mk()];
+
+// 큰 사진은 반씩 줄여 가며 그린다. 한 번에 크게 줄이면 가는 선이 들쭉날쭉하게 남아
+// 같은 사진인데도 크기에 따라 다른 무늬가 된다.
+function shrink(im) {
+  let w = im.naturalWidth || im.width, h = im.naturalHeight || im.height, src = im, t = 0;
+  while (Math.max(w, h) > 2 * M) {
+    const nw = Math.max(1, Math.round(w / 2)), nh = Math.max(1, Math.round(h / 2));
+    const [c, cg] = scratch[t]; t = 1 - t;
+    c.width = nw; c.height = nh;                               // 크기를 바꾸면 내용이 지워짐
+    cg.imageSmoothingEnabled = true; cg.imageSmoothingQuality = "high";
+    cg.drawImage(src, 0, 0, w, h, 0, 0, nw, nh);
+    src = c; w = nw; h = nh;
+  }
+  return { src, w, h };
+}
+
+// 서명. 회색 그림으로 바꾸어 N×N 칸으로 줄이고, 칸마다 둘레 평균을 뺀 뒤 길이를 1로 맞춘다.
+// 둘레 평균을 빼면 조명이 한쪽으로 기운 것이나 넓은 그림자가 빠지고 선과 물건의 윤곽이 남는다.
+// 길이를 1로 맞추면 전체 밝기를 올리거나 내린 사진도 거의 같은 서명이 된다.
+// deg 가 있으면 10주차 증강 도구(augment.html)와 같은 방법으로 돌려서 그린다.
+function sigFrom(s, deg) {
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.imageSmoothingEnabled = true; g.imageSmoothingQuality = "high";
+  if (!deg || !s.w || !s.h) {
+    g.fillStyle = "#fff"; g.fillRect(0, 0, M, M);              // 투명한 그림은 흰 바탕으로
+    if (s.w && s.h) g.drawImage(s.src, 0, 0, s.w, s.h, 0, 0, M, M); else g.drawImage(s.src, 0, 0, M, M);
+  } else {
+    g.fillStyle = "#e9e9e9"; g.fillRect(0, 0, M, M);           // 증강 도구가 빈 구석에 채우는 색
+    g.setTransform(M / s.w, 0, 0, M / s.h, 0, 0);
+    g.translate(s.w / 2, s.h / 2); g.rotate(deg * Math.PI / 180);
+    g.drawImage(s.src, 0, 0, s.w, s.h, -s.w / 2, -s.h / 2, s.w, s.h);
+    g.setTransform(1, 0, 0, 1, 0, 0);
+  }
+  const d = g.getImageData(0, 0, M, M).data, K = M / N, c = new Float32Array(N * N);
+  for (let y = 0; y < M; y++) {
+    const row = (y / K | 0) * N;
+    for (let x = 0; x < M; x++) { const i = 4 * (y * M + x); c[row + (x / K | 0)] += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2]; }
+  }
+  for (let i = 0; i < N * N; i++) c[i] /= K * K;
+  // 둘레 (2R+1)×(2R+1) 칸의 평균. 가장자리에서는 가장자리 칸을 되풀이해 씀
+  const t = new Float32Array(N * N), v = new Float32Array(N * N), cl = (a) => a < 0 ? 0 : a >= N ? N - 1 : a;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { let a = 0; for (let k = -R; k <= R; k++) a += c[y * N + cl(x + k)]; t[y * N + x] = a; }
+  let ss = 0;
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
+    let a = 0; for (let k = -R; k <= R; k++) a += t[cl(y + k) * N + x];
+    const q = c[y * N + x] - a / ((2 * R + 1) * (2 * R + 1)); v[y * N + x] = q; ss += q * q;
+  }
+  const flat = Math.sqrt(ss / (N * N)) < 0.5;                  // 거의 한 색인 사진은 견줄 무늬가 없음
+  if (!flat) { const n = Math.sqrt(ss); for (let i = 0; i < N * N; i++) v[i] /= n; }
+  return { v, flat };
+}
+async function signature(file, angles) {
+  const im = await loadImg(file);
+  const s = shrink(im), base = sigFrom(s, 0);                  // 여기부터 끝까지 기다림 없이 한 번에 계산함
+  const out = { file, v: base.v, flat: base.flat, aug: augTag(file), rot: null };
+  if (angles.length && !base.flat) out.rot = angles.map(a => ({ deg: a, v: sigFrom(s, a).v }));
+  return out;
+}
+function mirror(v) {                                           // 좌우로 뒤집은 서명
+  const m = new Float32Array(N * N);
+  for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) m[y * N + x] = v[y * N + (N - 1 - x)];
+  return m;
+}
+function dot(a, b) { let s = 0; for (let i = 0; i < a.length; i++) s += a[i] * b[i]; return s; }
+const pause = () => new Promise(r => setTimeout(r, 0));
+
+async function readAll() {
+  const total = sets.reduce((a, s) => a + s.length, 0); let done = 0, fail = 0;
+  // 학습 묶음의 파일 이름에 돌린 꼬리표가 있으면 그 각도로 개발용과 최종용 사진도 돌려 본다
+  const angles = Array.from(new Set(sets[0].map(augTag).filter(t => t && t.type === "rot").map(t => t.deg))).slice(0, 8);
+  $("bar").hidden = false; $("bar").value = 0;
+  for (let k = 0; k < 3; k++) {
+    if (sigs[k]) { done += sets[k].length; continue; }         // 이미 읽은 묶음은 다시 읽지 않음
+    const files = sets[k], out = new Array(files.length); let next = 0;
+    const worker = async () => {
+      while (next < files.length) {
+        const i = next++;
+        try { out[i] = await signature(files[i], k === 0 ? [] : angles); } catch (e) { out[i] = null; fail++; }
+        done++;
+        if (done % 8 === 0 || done === total) { $("progress").textContent = "읽는 중 " + done + " / " + total; $("bar").value = done / total; }
+      }
+    };
+    await Promise.all([worker(), worker(), worker(), worker()]);   // 네 장씩 함께 읽음
+    sigs[k] = out.filter(Boolean);
+  }
+  return fail;
+}
+
+// 묶음 사이의 모든 쌍을 견주어 같은 정도가 MIN_T 이상인 것을 모은다.
+// how 0 그대로, 1 좌우로 뒤집음, 2 증강 도구와 같은 각도로 돌림
+async function findAll() {
+  const out = []; let n = 0;
+  for (const [ka, kb] of [[0, 1], [0, 2], [1, 2]]) {
+    if (!sigs[ka] || !sigs[kb]) continue;
+    const A = sigs[ka].filter(s => !s.flat), B = sigs[kb].filter(s => !s.flat);
+    for (const b of B) {
+      const bm = mirror(b.v);
+      for (const a of A) {
+        let s = dot(a.v, b.v), how = 0;
+        const f = dot(a.v, bm); if (f > s) { s = f; how = 1; }
+        if (ka === 0 && b.rot && a.aug && a.aug.type === "rot") {
+          const r = b.rot.find(r => r.deg === a.aug.deg);
+          if (r) { const q = dot(a.v, r.v); if (q > s) { s = q; how = 2; } }
+        }
+        if (s >= MIN_T) out.push({ ka, kb, a, b, sim: s, how });
+      }
+      if (++n % 10 === 0) { $("progress").textContent = "견주는 중"; await pause(); }
+    }
+  }
+  out.sort((x, y) => y.sim - x.sim);
+  return out;
+}
+function kindOf(p) {
+  if (p.how === 1) return ["좌우로 뒤집은 사진", "flip"];
+  if (p.how === 2) return ["돌려서 만든 사진", "flip"];
+  if (p.sim >= 0.999 && p.a.file.size === p.b.file.size) return ["같은 파일", ""];
+  if (p.sim >= 0.99) return ["같은 사진", ""];
+  return ["거의 같은 사진", "near"];
+}
+const thText = () => parseFloat($("th").value).toFixed(2);
+
+function compare() {
+  $("thval").textContent = thText();
+  if (!ready) return;
+  const th = parseFloat($("th").value) - 1e-9;
+  pairs = found.filter(p => p.sim >= th);
+  const counts = {};
+  for (const [ka, kb, id] of [[0, 1, "r01"], [0, 2, "r02"], [1, 2, "r12"]]) {
+    const el = $(id);
+    if (!sigs[ka] || !sigs[kb] || !sigs[ka].length || !sigs[kb].length) { el.className = "read"; el.querySelector("b").textContent = "-"; counts[id] = null; continue; }
+    const n = pairs.filter(p => p.ka === ka && p.kb === kb).length; counts[id] = n;
+    el.className = "read " + (n ? "bad" : "ok"); el.querySelector("b").textContent = n + "쌍";
+  }
+  $("advice").textContent = pairs.length === 0
+    ? "넣은 묶음 사이에서 같은 사진을 찾지 못했습니다. 같은 물건을 다른 각도에서 찍은 사진은 이 검사로 찾을 수 없으니 촬영 기록으로 한 번 더 확인하세요."
+    : "겹친 것으로 보이는 쌍이 " + pairs.length + "개 있습니다. 아래 사진을 눈으로 확인하세요. 같은 사진이면 고정 개발용이나 최종 테스트용에서 빼고, 서로 다른 사진이면 그대로 둡니다. 최종 테스트용에서 사진을 빼는 일은 모델 결과를 보기 전에만 합니다.";
+  const aug = [1, 2].map(k => sets[k].filter(augTag).length);
+  $("augwarn").textContent = aug[0] + aug[1] === 0 ? "" :
+    [1, 2].filter(k => aug[k - 1]).map(k => NAMES[k] + "에 증강 도구가 만든 것으로 보이는 파일이 " + aug[k - 1] + "장 있습니다").join(". ") + ". 이름 끝이 _rot12, _flip, _b70 같은 파일입니다. 증강본은 학습 업로드용에만 넣습니다.";
+  const flat = sigs.reduce((a, s) => a + (s ? s.filter(x => x.flat).length : 0), 0);
+  $("skipped").textContent = flat ? "거의 한 색이라 견줄 무늬가 없는 사진 " + flat + "장은 비교하지 않았습니다." : "";
+  drawPairs(); writeReport(counts, aug, flat);
+  $("resultCard").hidden = false; $("reportCard").hidden = false;
+}
+
+function drawPairs() {
+  urls.forEach(u => URL.revokeObjectURL(u)); urls = [];
+  const box = $("pairs"); box.innerHTML = "";
+  const show = pairs.slice(0, 60);
+  for (const p of show) {
+    const ua = URL.createObjectURL(p.a.file), ub = URL.createObjectURL(p.b.file); urls.push(ua, ub);
+    const [kind, cls] = kindOf(p);
+    const el = document.createElement("div"); el.className = "pair";
+    el.innerHTML = "<div class=\"head\"><span class=\"kind " + cls + "\"></span><span class=\"s\"></span></div><div class=\"two\">" +
+      "<figure><img loading=\"lazy\"><figcaption class=\"n1\"><span class=\"tag\"></span></figcaption></figure>" +
+      "<figure><img loading=\"lazy\"><figcaption class=\"n2\"><span class=\"tag\"></span></figcaption></figure></div>";
+    const im = el.querySelectorAll("img"); im[0].src = ua; im[1].src = ub;
+    im[0].alt = NAMES[p.ka] + " " + shortName(p.a.file); im[1].alt = NAMES[p.kb] + " " + shortName(p.b.file);
+    el.querySelector(".kind").textContent = kind;
+    el.querySelector(".n1 .tag").textContent = SHORT[p.ka]; el.querySelector(".n1").append(" " + shortName(p.a.file));
+    el.querySelector(".n2 .tag").textContent = SHORT[p.kb]; el.querySelector(".n2").append(" " + shortName(p.b.file));
+    el.querySelector(".s").textContent = "같은 정도 " + p.sim.toFixed(3);
+    box.appendChild(el);
+  }
+  $("more").textContent = pairs.length > show.length ? "같은 정도가 높은 순으로 " + show.length + "쌍만 보였습니다. 전체 " + pairs.length + "쌍은 아래 결과 글에 있습니다." : "";
+}
+
+function writeReport(counts, aug, flat) {
+  const L = ["[세 묶음 겹침 검사] " + new Date().toLocaleDateString("ko-KR")];
+  L.push(NAMES.map((n, k) => n + " " + (sigs[k] ? sigs[k].length : 0) + "장").join(", ") + (flat ? " (거의 한 색이라 비교하지 않은 사진 " + flat + "장)" : ""));
+  L.push("같은 사진으로 본 기준 " + thText());
+  const c = (id) => counts[id] === null ? "넣지 않음" : counts[id] + "쌍";
+  L.push("학습 ↔ 개발 " + c("r01") + ", 학습 ↔ 최종 " + c("r02") + ", 개발 ↔ 최종 " + c("r12"));
+  if (aug[0] + aug[1]) L.push("증강 꼬리표가 붙은 파일. 개발 " + aug[0] + "장, 최종 " + aug[1] + "장");
+  pairs.slice(0, 200).forEach(p => L.push("- " + kindOf(p)[0] + " | " + SHORT[p.ka] + " " + shortName(p.a.file) + " | " + SHORT[p.kb] + " " + shortName(p.b.file) + " | " + p.sim.toFixed(3)));
+  if (pairs.length > 200) L.push("(이하 " + (pairs.length - 200) + "쌍 줄임)");
+  L.push("조치. ");
+  $("report").value = L.join("\n");
+}
+
+$("run").addEventListener("click", async () => {
+  $("run").disabled = true; ready = false;
+  const fail = await readAll();
+  $("progress").textContent = "견주는 중";
+  found = await findAll();
+  $("bar").hidden = true; ready = true;
+  $("progress").textContent = "검사가 끝났습니다. " + sigs.reduce((a, s) => a + (s ? s.length : 0), 0) + "장을 읽었습니다." + (fail ? " 열지 못한 파일 " + fail + "개. 브라우저가 읽지 못하는 형식(HEIC 등)이면 JPG 로 바꿔 넣으세요." : "");
+  compare();
+  $("run").disabled = false;
+});
+$("th").addEventListener("input", compare);
+$("copy").addEventListener("click", async () => {
+  const t = $("report"); t.select();
+  try { await navigator.clipboard.writeText(t.value); $("copied").textContent = "복사했습니다."; }
+  catch (e) { try { document.execCommand("copy"); $("copied").textContent = "복사했습니다."; } catch (e2) { $("copied").textContent = "글을 직접 선택해 복사하세요."; } }
+});
+</script>
+</body>
+</html>
