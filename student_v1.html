@@ -390,7 +390,7 @@ async function startCamera() {
     video.hidden = false;
     $("still").hidden = true;
     $("empty").hidden = true;
-    $("shot").hidden = currentActivity !== "classify";
+    $("shot").hidden = false;
     $("cam").textContent = "카메라 끄기";
   } catch (error) {
     say(error.name === "NotAllowedError" ? "카메라를 쓸 수 없어요. 주소창의 자물쇠를 눌러 카메라를 허용하거나, 사진 고르기를 눌러 주세요." : error.name === "NotFoundError" ? "카메라를 찾지 못했어요. 사진 고르기를 눌러 주세요." : "카메라를 켜지 못했어요. 사진 고르기를 눌러 주세요.", true);
