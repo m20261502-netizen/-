@@ -59,6 +59,7 @@ const CONFIG = {
   #draw { display:block; width:100%; height:300px; border:2px solid #CBD5E3; border-radius:14px; background:#fff; touch-action:none; cursor:crosshair; }
   .drawbtns, .btns { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .drawbtns { margin-top:10px; }
+  .camera-select { min-height:56px; padding:8px 10px; border:2px solid var(--navy); border-radius:16px; background:#fff; color:var(--navy); font:inherit; font-weight:700; }
   button, .filebtn { font:inherit; font-size:18px; font-weight:700; min-height:56px; border-radius:16px; border:2px solid var(--navy); background:var(--navy); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; text-align:center; padding:8px 12px; }
   button.shot { grid-column:1 / span 2; background:var(--bar); border-color:var(--bar); color:#2b2100; font-size:21px; }
   button.light, .filebtn { background:#fff; color:var(--navy); }
@@ -126,6 +127,10 @@ const CONFIG = {
             </div>
           </div>
           <div class="btns">
+            <select id="cameraFacing" class="camera-select" aria-label="카메라 선택" disabled>
+              <option value="environment">뒤카메라</option>
+              <option value="user">앞카메라</option>
+            </select>
             <button id="cam" type="button" disabled>카메라 켜기</button>
             <label class="filebtn" id="pickwrap">사진 고르기<input type="file" id="pick" accept="image/*" disabled></label>
             <button id="drawMode" class="light" type="button" disabled>직접 그리기</button>
@@ -336,7 +341,7 @@ function ready(how) {
   $("msg").textContent = "모델을 불러왔습니다 (" + how + "). 클래스: " + TM.labels.join(", ");
   const missing = TM.labels.filter(label => !CONFIG.classes[label]);
   $("cfg").textContent = "학년군 " + GRADE + ", 기준값 " + TH.toFixed(2) + (missing.length ? ". CONFIG에 문구가 없는 클래스: " + missing.join(", ") : ". 모든 클래스에 문구가 있습니다.");
-  ["cam", "pick", "drawMode"].forEach(id => $(id).disabled = false);
+  ["cameraFacing", "cam", "pick", "drawMode"].forEach(id => $(id).disabled = false);
 }
 (async () => {
   try {
@@ -384,7 +389,7 @@ async function startCamera() {
     return;
   }
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: $("cameraFacing").value }, audio: false });
     const video = $("video");
     video.srcObject = stream;
     video.hidden = false;
@@ -397,6 +402,11 @@ async function startCamera() {
   }
 }
 $("cam").addEventListener("click", startCamera);
+$("cameraFacing").addEventListener("change", () => {
+  if (!stream) return;
+  stopCam();
+  startCamera();
+});
 
 // 한국어 주석: 카메라 영상의 가운데 부분을 캡처해 현재 활동에 맞게 판정합니다.
 async function captureCamera() {
