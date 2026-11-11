@@ -455,7 +455,13 @@ connectPicker("pick");
 function openDrawMode() { setInputMode("draw"); }
 $("drawMode").addEventListener("click", openDrawMode);
 $("clearDraw").addEventListener("click", clearDraw);
-$("analyzeDraw").addEventListener("click", () => judge(draw));
+$("analyzeDraw").addEventListener("click", () => {
+  if (!drawLines.length) {
+    say("잘 모르겠어요. 먼저 각을 그려 주세요.");
+    return;
+  }
+  judge(draw);
+});
 
 // 한국어 주석: 짧은 안내 문구를 결과 카드에 안전하게 표시합니다.
 function esc(text) { const element = document.createElement("div"); element.textContent = text; return element.innerHTML; }
