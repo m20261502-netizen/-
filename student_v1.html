@@ -90,8 +90,6 @@ const CONFIG = {
   .target-button.selected { background:var(--bar); color:#2b2100; border-color:var(--bar); }
   .q { margin-top:14px; padding:12px 14px; background:#F3F6FA; border-radius:14px; font-size:16.5px; line-height:1.55; }
   .notice { position:fixed; z-index:5; left:0; right:0; bottom:0; margin:0; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); background:#10233F; color:#fff; font-size:15px; text-align:center; line-height:1.5; }
-  .notice-message, .bottom-note { display:block; }
-  .bottom-note { margin-top:4px; }
   details { font-size:14px; color:#42526a; background:#fff; border-radius:14px; padding:10px 14px; }
   details summary { cursor:pointer; font-weight:600; }
   details input { font-size:14px; margin-top:8px; max-width:100%; }
@@ -177,12 +175,12 @@ const CONFIG = {
     <label>모델 파일 3개 고르기 (model.json, metadata.json, weights.bin)<br><input type="file" id="mfiles" accept=".json,.bin" multiple></label>
     <p id="cfg"></p>
   </details>
+  <div class="bottom-notes">
+    <p class="subtitle">💡 AI의 판정은 참고용이에요! 여러분이 직접 잰 각도기 눈금과 결과를 비교해봅시다.</p>
+    <p class="privacy-note">🔒 사진은 이 기기 안에서만 분석되며 저장하거나 외부로 보내지 않습니다. 이름과 로그인도 필요하지 않습니다.</p>
+  </div>
 </div>
-<p class="notice" id="notice">
-  <span class="notice-message" id="noticeMessage"></span>
-  <span class="bottom-note">💡 AI의 판정은 참고용이에요! 여러분이 직접 잰 각도기 눈금과 결과를 비교해봅시다.</span>
-  <span class="bottom-note">🔒 사진은 이 기기 안에서만 분석되며 저장하거나 외부로 보내지 않습니다. 이름과 로그인도 필요하지 않습니다.</span>
-</p>
+<p class="notice" id="notice"></p>
 
 <script>
 // 한국어 주석: 티처블 머신 모델과 현재 활동 상태를 저장합니다.
@@ -275,7 +273,7 @@ const TH = CONFIG.threshold;
 document.body.classList.add(GRADE);
 $("title").textContent = CONFIG.title;
 document.title = CONFIG.title;
-$("noticeMessage").textContent = CONFIG.notice;
+$("notice").textContent = CONFIG.notice;
 let currentActivity = "classify";
 let selectedTarget = null;
 let stream = null;
