@@ -17,9 +17,9 @@ const CONFIG = {
   grade: "mid",
   threshold: 0.95,
   classes: {
-    "acute angle": { key: "acute", say: "예각 같아요", hint: "직각(90°)보다 작은지 각도기로 확인해 봐요." },
-    "right angle": { key: "right", say: "직각 같아요", hint: "삼각자의 직각 부분과 딱 맞는지 대 봐요." },
-    "obtuse angle": { key: "obtuse", say: "둔각 같아요", hint: "직각(90°)보다 크고 180°보다 작은지 확인해 봐요." },
+    "acute angle": { key: "acute", say: "예각 같아요", hint: "AI는 예각으로 짐작하고 있어요. 삼각자/각도기로 진짜 맞는지 확인해 볼까요?" },
+    "right angle": { key: "right", say: "직각 같아요", hint: "AI는 직각으로 짐작하고 있어요. 삼각자/각도기로 진짜 맞는지 확인해 볼까요?" },
+    "obtuse angle": { key: "obtuse", say: "둔각 같아요", hint: "AI는 둔각으로 짐작하고 있어요. 삼각자/각도기로 진짜 맞는지 확인해 볼까요?" },
     "not angle": { key: "notAngle", say: "각이 아닌 것 같아요", hint: "두 변이 한 점에서 만나는지 다시 확인해 봐요." }
   },
   unsure: {
@@ -38,8 +38,10 @@ const CONFIG = {
   :root { --ink:#10233F; --navy:#0B3A75; --ok:#0E8A7B; --bad:#B44949; --unsure:#6E7A8C; --bar:#F2B90F; --bg:#EAF0F7; --line:#CBD5E3; }
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--ink); font-family:"IBM Plex Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif; }
-  .app { max-width:1100px; margin:0 auto; min-height:100vh; padding:16px 16px calc(88px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:14px; }
-  h1 { font-size:30px; margin:6px 0 0; letter-spacing:-0.02em; }
+  body { min-height:100vh; display:flex; justify-content:center; }
+  .app { width:min(1100px, 100%); max-width:1100px; margin:0 auto; min-height:100vh; padding:16px 16px calc(88px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:14px; }
+  h1 { font-size:32px; margin:6px 0 0; letter-spacing:-0.02em; text-align:center; }
+  .subtitle { margin:0; color:#42526a; font-size:17px; line-height:1.55; text-align:center; }
   [hidden] { display:none !important; }
   .tabs { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .tab { min-height:58px; background:#fff; color:var(--navy); border:2px solid var(--line); }
@@ -69,6 +71,8 @@ const CONFIG = {
   .say .icon { font-size:52px; line-height:1; }
   .say b { font-size:28px; line-height:1.25; letter-spacing:-0.02em; }
   .hint, .feedback { font-size:18px; margin:10px 0 0; line-height:1.55; }
+  .result-note { margin:14px 0 0; padding-top:12px; border-top:1px solid var(--line); font-size:17px; line-height:1.55; }
+  .result-caution { margin:8px 0 0; color:#42526a; font-size:16px; line-height:1.5; }
   ul.tips { margin:10px 0 0; padding-left:22px; font-size:18px; line-height:1.7; }
   .bars { margin-top:14px; display:grid; gap:8px; }
   .barrow { display:grid; grid-template-columns:5.5em 1fr; gap:8px; align-items:center; font-size:15px; }
@@ -94,6 +98,8 @@ const CONFIG = {
 <div class="app">
   <!-- 한국어 주석: 제목 바로 아래에서 두 활동을 선택하게 합니다. -->
   <h1 id="title"></h1>
+  <!-- 한국어 주석: 제목 아래에 AI 판정의 한계를 알려 주는 안내를 표시합니다. -->
+  <p class="subtitle">💡 AI의 판정은 참고용이에요! 진짜 답은 여러분이 직접 잰 각도기 눈금과 비교해봅시다.</p>
   <nav class="tabs" aria-label="학습 활동">
     <button class="tab active" id="tabClassify" type="button" aria-selected="true">활동 1. 각도를 분류해요</button>
     <button class="tab" id="tabDraw" type="button" aria-selected="false">활동 2. 각도를 그려요</button>
@@ -446,6 +452,12 @@ function say(text, plain) {
   result.firstChild.textContent = text;
 }
 function classInfo(label) { return CONFIG.classes[label] || { key: "", say: label + " 같아요", hint: "" }; }
+// 한국어 주석: AI 결과를 직접 확인하도록 학생에게 안내하는 문구를 결과 카드에 덧붙입니다.
+function resultNotes(info) {
+  const hasAngleGuess = ["acute", "right", "obtuse"].includes(info.key);
+  return (hasAngleGuess ? "<p class=\"result-note\">" + esc(info.hint) + "</p>" : "") +
+    "<p class=\"result-caution\">AI의 생각이 나와 다를 수 있어요. 삼각자를 대어 헷갈리는 부분을 직접 찾아봐요!</p>";
+}
 function topBars(order, probabilities) {
   if (GRADE === "low") return "";
   let html = "<div class=\"bars\" aria-label=\"AI의 생각\">";
@@ -495,11 +507,11 @@ async function judge(canvas) {
   result.hidden = false;
   if (probabilities[top] < TH) {
     result.className = "result unsure";
-    result.innerHTML = "<div class=\"say\"><span class=\"icon\">🤔</span><b>" + esc(CONFIG.unsure.say) + "</b></div><ul class=\"tips\">" + CONFIG.unsure.tips.map(tip => "<li>" + esc(tip) + "</li>").join("") + "</ul>";
+    result.innerHTML = "<div class=\"say\"><span class=\"icon\">🤔</span><b>" + esc(CONFIG.unsure.say) + "</b></div><ul class=\"tips\">" + CONFIG.unsure.tips.map(tip => "<li>" + esc(tip) + "</li>").join("") + "</ul><p class=\"result-caution\">AI의 생각이 나와 다를 수 있어요. 삼각자를 대어 헷갈리는 부분을 직접 찾아봐요!</p>";
   } else {
     const info = classInfo(TM.labels[top]);
     result.className = "result know";
-    result.innerHTML = "<div class=\"say\"><b>" + esc(info.say) + "</b></div>" + (info.hint ? "<p class=\"hint\">" + esc(info.hint) + "</p>" : "");
+    result.innerHTML = "<div class=\"say\"><b>" + esc(info.say) + "</b></div>" + resultNotes(info);
   }
   result.insertAdjacentHTML("beforeend", topBars(order, probabilities));
 }
