@@ -3,112 +3,160 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<!-- 한국어 주석: 학생 화면 제목을 각도 분류 수업에 맞게 변경했습니다. -->
+<!-- 한국어 주석: 초등학생이 사용할 각도 학습 도우미의 기본 정보를 설정합니다. -->
 <title>각도 분류 도우미</title>
-<!-- 그래픽스개론 11주차. 학생용 화면 v1 틀.
-     아래 CONFIG 만 내 프로젝트에 맞게 고치면 된다. 고칠 곳은 네 가지: 제목, 학년군, 기준값, 클래스별 문구.
-     사진은 브라우저 안에서만 처리하고 저장하거나 외부로 보내지 않는다. 로그인, 이름 입력, 점수 저장을 넣지 않는다. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.3.1/dist/tf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@0.8/dist/teachablemachine-image.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@teachablemachine/pose@0.8/dist/teachablemachine-pose.min.js"></script>
 <script>
-// ================= 여기만 고치세요 =================
-const CONFIG = { // 한국어 주석: 학생 화면에서 사용하는 수업 설정을 한곳에 모았습니다.
-  title: "각도 분류 도우미", // 한국어 주석: 화면과 문서에 표시할 제목입니다.
-  grade: "mid", // 한국어 주석: 초등학교 3~4학년용 화면 크기와 표현을 사용합니다.
-  threshold: 0.95, // 한국어 주석: 최고 확률이 이 값 이상일 때만 분류 결과를 말합니다.
-  classes: { // 한국어 주석: metadata.json의 클래스 영문명과 문구를 연결합니다.
-    "acute angle": { say: "예각 같아요", hint: "직각(90°)보다 작은지 각도기로 확인해 봐요." }, // 한국어 주석: 예각 안내입니다.
-    "right angle": { say: "직각 같아요", hint: "삼각자의 직각 부분과 딱 맞는지 대 봐요." }, // 한국어 주석: 직각 안내입니다.
-    "obtuse angle": { say: "둔각 같아요", hint: "직각(90°)보다 크고 180°보다 작은지 확인해 봐요." }, // 한국어 주석: 둔각 안내입니다.
-    "not angle": { say: "각이 아닌 것 같아요", hint: "두 변이 한 점에서 만나는지 다시 확인해 봐요." } // 한국어 주석: 각이 아닌 경우의 안내입니다.
+// 한국어 주석: 판정 기준과 학생용 문구를 한곳에서 관리합니다.
+const CONFIG = {
+  title: "각도 분류 도우미",
+  grade: "mid",
+  threshold: 0.95,
+  classes: {
+    "acute angle": { key: "acute", say: "예각 같아요", hint: "직각(90°)보다 작은지 각도기로 확인해 봐요." },
+    "right angle": { key: "right", say: "직각 같아요", hint: "삼각자의 직각 부분과 딱 맞는지 대 봐요." },
+    "obtuse angle": { key: "obtuse", say: "둔각 같아요", hint: "직각(90°)보다 크고 180°보다 작은지 확인해 봐요." },
+    "not angle": { key: "notAngle", say: "각이 아닌 것 같아요", hint: "두 변이 한 점에서 만나는지 다시 확인해 봐요." }
   },
-  unsure: { // 한국어 주석: 확률이 낮거나 인식이 불안정할 때 보여 줄 안내입니다.
-    say: "잘 모르겠어요", // 한국어 주석: 불확실할 때의 짧은 표현입니다.
-    tips: [ // 한국어 주석: 다시 촬영할 때 확인할 세 가지 방법입니다.
-      "각도가 화면 가운데에 크게 보이게 놓아요", // 한국어 주석: 도형을 크게 보여 달라는 안내입니다.
-      "창문을 등지고 밝은 곳에서 선이 잘 보이게 찍어요", // 한국어 주석: 밝은 환경에서 촬영하라는 안내입니다.
-      "각도 도형 하나만 한 번에 보여 줘요" // 한국어 주석: 한 번에 하나만 보여 달라는 안내입니다.
+  unsure: {
+    say: "잘 모르겠어요",
+    tips: [
+      "각도가 화면 가운데에 크게 보이게 놓아요",
+      "창문을 등지고 밝은 곳에서 선이 잘 보이게 찍어요",
+      "각도 도형 하나만 한 번에 보여 줘요"
     ]
   },
-  notice: "AI는 틀릴 수 있어요. 헷갈리면 선생님께 물어봐요." // 한국어 주석: 화면 하단의 고정 안내 문구입니다.
+  notice: "AI는 틀릴 수 있어요. 헷갈리면 선생님께 물어봐요."
 };
-// ===================================================
 </script>
 <style>
-  :root { --ink:#10233F; --navy:#0B3A75; --ok:#0E8A7B; --unsure:#6E7A8C; --bar:#F2B90F; --bg:#EAF0F7; --line:#CBD5E3; }
+  /* 한국어 주석: 저학년 화면에 맞는 색과 간격을 정의합니다. */
+  :root { --ink:#10233F; --navy:#0B3A75; --ok:#0E8A7B; --bad:#B44949; --unsure:#6E7A8C; --bar:#F2B90F; --bg:#EAF0F7; --line:#CBD5E3; }
   * { box-sizing:border-box; }
   body { margin:0; background:var(--bg); color:var(--ink); font-family:"IBM Plex Sans KR","Malgun Gothic","Apple SD Gothic Neo",sans-serif; }
-  .app { max-width:520px; margin:0 auto; min-height:100vh; padding:16px 16px calc(24px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:14px; }
-  h1 { font-size:26px; margin:6px 0 0; letter-spacing:-0.02em; }
-  [hidden] { display:none !important; }   /* display 를 따로 준 요소도 hidden 이면 확실히 감춤 */
+  .app { max-width:1100px; margin:0 auto; min-height:100vh; padding:16px 16px calc(88px + env(safe-area-inset-bottom)); display:flex; flex-direction:column; gap:14px; }
+  h1 { font-size:30px; margin:6px 0 0; letter-spacing:-0.02em; }
+  [hidden] { display:none !important; }
+  .tabs { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .tab { min-height:58px; background:#fff; color:var(--navy); border:2px solid var(--line); }
+  .tab.active { background:var(--navy); color:#fff; border-color:var(--navy); }
+  .activity { display:flex; flex-direction:column; gap:14px; }
+  .activity h2 { font-size:24px; margin:0; }
+  .guide { margin:0; font-size:18px; line-height:1.55; }
+  .activity-grid { display:grid; grid-template-columns:minmax(0, 1fr) minmax(320px, .85fr); gap:18px; align-items:start; }
+  .left-column, .right-column { display:flex; flex-direction:column; gap:12px; }
   .frame { position:relative; background:#0d1b2f; border-radius:22px; overflow:hidden; aspect-ratio:1; }
   .frame video, .frame canvas { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
   .frame .empty { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; color:#c9d6e8; font-size:17px; text-align:center; padding:24px; line-height:1.6; }
-  .btns { display:grid; grid-template-columns:1fr 1fr; gap:10px; } /* 한국어 주석: 카메라·사진·그리기 버튼을 두 열로 배치합니다. */
-  .drawbox { background:#fff; border:2px solid var(--line); border-radius:22px; padding:14px; } /* 한국어 주석: 흰 배경의 직접 그리기 영역입니다. */
-  .drawtitle { margin:0 0 10px; font-size:18px; font-weight:700; } /* 한국어 주석: 그리기 안내를 크게 보여 줍니다. */
-  #draw { display:block; width:100%; height:300px; border:2px solid #CBD5E3; border-radius:14px; background:#fff; touch-action:none; cursor:crosshair; } /* 한국어 주석: 손가락과 마우스로 선을 그리는 캔버스입니다. */
-  .drawbtns { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px; } /* 한국어 주석: 지우기와 분석 버튼을 나란히 배치합니다. */
-  button, .filebtn { font:inherit; font-size:18px; font-weight:700; min-height:56px; border-radius:16px; border:2px solid var(--navy); background:var(--navy); color:#fff; cursor:pointer;
-                     display:flex; align-items:center; justify-content:center; text-align:center; padding:8px 12px; }
+  .drawbox { background:#fff; border:2px solid var(--line); border-radius:22px; padding:14px; }
+  .drawtitle { margin:0 0 10px; font-size:18px; font-weight:700; }
+  #draw { display:block; width:100%; height:300px; border:2px solid #CBD5E3; border-radius:14px; background:#fff; touch-action:none; cursor:crosshair; }
+  .drawbtns, .btns { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .drawbtns { margin-top:10px; }
+  button, .filebtn { font:inherit; font-size:18px; font-weight:700; min-height:56px; border-radius:16px; border:2px solid var(--navy); background:var(--navy); color:#fff; cursor:pointer; display:flex; align-items:center; justify-content:center; text-align:center; padding:8px 12px; }
   button.shot { grid-column:1 / span 2; background:var(--bar); border-color:var(--bar); color:#2b2100; font-size:21px; }
   button.light, .filebtn { background:#fff; color:var(--navy); }
   button:disabled { opacity:.45; cursor:default; }
   button:focus-visible, .filebtn:focus-within { outline:4px solid var(--bar); outline-offset:2px; }
   .filebtn input { position:absolute; opacity:0; width:1px; height:1px; }
-  .result { background:#fff; border-radius:22px; padding:18px 18px 16px; border:2px solid var(--line); }
-  .result.know { border-color:var(--ok); } .result.unsure { border-color:var(--unsure); }
+  .result { background:#fff; border-radius:22px; padding:18px 18px 16px; border:2px solid var(--line); min-height:140px; }
+  .result.know { border-color:var(--ok); } .result.unsure { border-color:var(--unsure); } .result.correct { border-color:var(--ok); background:#F0FBF7; } .result.incorrect { border-color:var(--bad); background:#FFF7F4; }
   .say { display:flex; align-items:center; gap:14px; }
   .say .icon { font-size:52px; line-height:1; }
   .say b { font-size:28px; line-height:1.25; letter-spacing:-0.02em; }
-  .hint { font-size:18px; margin:10px 0 0; line-height:1.55; }
+  .hint, .feedback { font-size:18px; margin:10px 0 0; line-height:1.55; }
   ul.tips { margin:10px 0 0; padding-left:22px; font-size:18px; line-height:1.7; }
   .bars { margin-top:14px; display:grid; gap:8px; }
-  .barrow { display:grid; grid-template-columns:5.5em 1fr 3.2em; gap:8px; align-items:center; font-size:15px; }
+  .barrow { display:grid; grid-template-columns:5.5em 1fr; gap:8px; align-items:center; font-size:15px; }
   .track { height:14px; background:#E3E9F1; border-radius:7px; overflow:hidden; }
   .fill { height:100%; background:var(--navy); border-radius:7px; }
   .barrow.top .fill { background:var(--ok); }
+  .target-box { background:#fff; border:2px solid var(--line); border-radius:22px; padding:14px; }
+  .target-title { margin:0 0 10px; font-size:18px; font-weight:700; }
+  .target-buttons { display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; }
+  .target-button { min-height:52px; font-size:17px; background:#fff; color:var(--navy); }
+  .target-button.selected { background:var(--bar); color:#2b2100; border-color:var(--bar); }
   .q { margin-top:14px; padding:12px 14px; background:#F3F6FA; border-radius:14px; font-size:16.5px; line-height:1.55; }
-  .notice { font-size:15px; color:#42526a; text-align:center; line-height:1.5; }
+  .notice { position:fixed; z-index:5; left:0; right:0; bottom:0; margin:0; padding:12px 16px calc(12px + env(safe-area-inset-bottom)); background:#10233F; color:#fff; font-size:15px; text-align:center; line-height:1.5; }
   details { font-size:14px; color:#42526a; background:#fff; border-radius:14px; padding:10px 14px; }
   details summary { cursor:pointer; font-weight:600; }
   details input { font-size:14px; margin-top:8px; max-width:100%; }
   #msg { font-size:14.5px; margin:6px 0 0; }
-  body.low .say b { font-size:34px; } body.low .say .icon { font-size:72px; } body.low .hint { font-size:21px; }
+  @media (max-width:760px) { .activity-grid { grid-template-columns:1fr; } .right-column { order:2; } }
+  body.low .say b { font-size:34px; } body.low .say .icon { font-size:72px; } body.low .hint, body.low .feedback { font-size:21px; }
 </style>
 </head>
 <body>
 <div class="app">
+  <!-- 한국어 주석: 제목 바로 아래에서 두 활동을 선택하게 합니다. -->
   <h1 id="title"></h1>
+  <nav class="tabs" aria-label="학습 활동">
+    <button class="tab active" id="tabClassify" type="button" aria-selected="true">활동 1. 각도를 분류해요</button>
+    <button class="tab" id="tabDraw" type="button" aria-selected="false">활동 2. 각도를 그려요</button>
+  </nav>
 
-  <div class="frame" id="frame" aria-label="사진 화면"> <!-- 한국어 주석: 카메라 영역을 직접 그리기 선택 때 숨깁니다. -->
-    <video id="video" playsinline muted autoplay hidden></video>
-    <canvas id="still" hidden></canvas>
-    <div class="empty" id="empty">카메라를 켜거나<br>사진을 골라 주세요</div>
-  </div>
-
-  <div class="drawbox" id="drawbox" hidden> <!-- 한국어 주석: 직접 그리기 영역을 처음에는 숨깁니다. -->
-    <p class="drawtitle">칸의 중앙에 각이 위치할 수 있게 그려주세요.</p> <!-- 한국어 주석: 각을 캔버스 중앙에 그리도록 안내합니다. -->
-    <canvas id="draw" width="480" height="300" aria-label="각도 그리기 칸"></canvas> <!-- 한국어 주석: 분석에 사용할 그림 캔버스입니다. -->
-    <div class="drawbtns"> <!-- 한국어 주석: 그리기 조작 버튼 묶음입니다. -->
-      <button id="clearDraw" class="light">지우기</button> <!-- 한국어 주석: 캔버스를 흰색으로 되돌립니다. -->
-      <button id="analyzeDraw" class="shot">그림 확인하기</button> <!-- 한국어 주석: 그린 그림을 분류합니다. -->
+  <!-- 한국어 주석: 활동 1은 왼쪽 입력 영역과 오른쪽 결과 영역의 2열 구조입니다. -->
+  <section class="activity" id="activityClassify">
+    <h2>활동 1. 각도를 분류해요</h2>
+    <p class="guide">각을 그려보고 예각, 직각, 둔각 중 어떤 각인지 확인해 봅시다.</p>
+    <div class="activity-grid">
+      <div class="left-column" id="classifyLeft">
+        <div id="workspace">
+          <div class="frame" id="frame" aria-label="사진 화면">
+            <video id="video" playsinline muted autoplay hidden></video>
+            <canvas id="still" hidden></canvas>
+            <div class="empty" id="empty">카메라를 켜거나<br>사진을 골라 주세요</div>
+          </div>
+          <div class="drawbox" id="drawbox" hidden>
+            <p class="drawtitle">칸의 중앙에 각이 위치할 수 있게 그려주세요.</p>
+            <canvas id="draw" width="480" height="300" aria-label="각도 그리기 칸"></canvas>
+            <div class="drawbtns">
+              <button id="clearDraw" class="light" type="button">지우기</button>
+              <button id="analyzeDraw" class="shot" type="button">그림 확인하기</button>
+            </div>
+          </div>
+          <div class="btns">
+            <button id="cam" type="button" disabled>카메라 켜기</button>
+            <label class="filebtn" id="pickwrap">사진 고르기<input type="file" id="pick" accept="image/*" disabled></label>
+            <button id="drawMode" class="light" type="button" disabled>직접 그리기</button>
+            <button id="shot" class="shot" type="button" hidden>찰칵! 확인하기</button>
+          </div>
+        </div>
+      </div>
+      <div class="right-column">
+        <div class="result" id="result" hidden aria-live="polite"></div>
+      </div>
     </div>
-  </div>
+  </section>
 
-  <div class="btns">
-    <button id="cam" disabled>카메라 켜기</button>
-    <label class="filebtn" id="pickwrap">사진 고르기<input type="file" id="pick" accept="image/*" disabled></label>
-    <button id="drawMode" class="light" disabled>직접 그리기</button>
-    <button id="shot" class="shot" hidden>찰칵! 확인하기</button>
-  </div>
+  <!-- 한국어 주석: 활동 2에서는 목표 각도를 고른 뒤 같은 입력 방법으로 제출합니다. -->
+  <section class="activity" id="activityDraw" hidden>
+    <h2>활동 2. 각도를 그려요</h2>
+    <p class="guide">목표 각도를 고른 다음, 사진을 찍거나 직접 그려서 제출해 봅시다.</p>
+    <div class="target-box">
+      <p class="target-title">그리고 싶은 각도를 골라 보세요.</p>
+      <div class="target-buttons">
+        <button class="target-button" type="button" data-target="acute">예각</button>
+        <button class="target-button" type="button" data-target="right">직각</button>
+        <button class="target-button" type="button" data-target="obtuse">둔각</button>
+      </div>
+    </div>
+    <div class="activity-grid">
+      <div class="left-column">
+        <!-- 한국어 주석: 두 활동이 같은 카메라·사진·그리기 입력 영역을 함께 사용합니다. -->
+        <div id="drawWorkspace"></div>
+      </div>
+      <div class="right-column">
+        <div class="result" id="result2" hidden aria-live="polite"></div>
+      </div>
+    </div>
+  </section>
 
-  <div class="result" id="result" hidden aria-live="polite"></div>
-  <p class="notice" id="notice"></p>
-
+  <!-- 한국어 주석: 선생님이 모델을 확인할 수 있지만 학생 개인정보는 입력받지 않습니다. -->
   <details id="teacher">
     <summary>선생님용. 모델과 설정</summary>
     <p id="msg">모델을 찾는 중입니다...</p>
@@ -116,203 +164,344 @@ const CONFIG = { // 한국어 주석: 학생 화면에서 사용하는 수업 �
     <p id="cfg"></p>
   </details>
 </div>
+<p class="notice" id="notice"></p>
+
 <script>
-// ===== 티처블 머신 모델 불러오기 (이미지 프로젝트와 포즈 프로젝트 모두) =====
-// 1) 이 화면과 같은 주소 아래에서 모델 폴더를 찾고 2) 없으면 파일 3개를 직접 고르게 한다. 파일은 브라우저 밖으로 나가지 않는다.
-// 한국어 주석: 불러온 모델, 모델 종류, 클래스 이름을 저장하는 전역 상태입니다.
+// 한국어 주석: 티처블 머신 모델과 현재 활동 상태를 저장합니다.
 const TM = { model: null, kind: null, labels: [] };
-// 한국어 주석: 모델 파일을 찾을 가능성이 있는 폴더 목록입니다.
 const TM_BASES = ["./", "./my_model/", "./model/", "./models/", "./tm_model/", "./my-model/", "./public/", "./assets/", "./static/"];
-// 한국어 주석: 모델 폴더 주소를 항상 슬래시로 끝나게 정리합니다.
-function tmNormBase(b) { b = b.trim().replace(/model\.json$/, "").replace(/metadata\.json$/, ""); if (!b) return "./"; if (!b.endsWith("/")) b += "/"; return b; }
-// 한국어 주석: index.html 안에 적힌 모델 폴더 주소도 찾아봅니다.
+function tmNormBase(base) { base = base.trim().replace(/model\.json$/, "").replace(/metadata\.json$/, ""); if (!base) return "./"; return base.endsWith("/") ? base : base + "/"; }
 async function tmBasesFromIndex() {
   const found = [];
   try {
-    const r = await fetch("./index.html", { cache: "no-store" }); if (!r.ok) return found;
-    const html = await r.text();
-    for (const m of html.matchAll(/(?:URL|url|modelURL|MODEL_URL|modelUrl|modelPath|MODEL_PATH|base|BASE)\s*=\s*["'`]([^"'`]{1,300}?)["'`]/g)) found.push(tmNormBase(m[1]));
-    for (const m of html.matchAll(/["'`]([^"'`\s]{0,300}\/)(?:model|metadata)\.json["'`]/g)) found.push(tmNormBase(m[1]));
-  } catch (e) { }
+    const response = await fetch("./index.html", { cache: "no-store" });
+    if (!response.ok) return found;
+    const html = await response.text();
+    for (const match of html.matchAll(/(?:URL|url|modelURL|MODEL_URL|modelUrl|modelPath|MODEL_PATH|base|BASE)\s*=\s*["'`]([^"'`]{1,300}?)["'`]/g)) found.push(tmNormBase(match[1]));
+    for (const match of html.matchAll(/["'`]([^"'`\s]{0,300}\/)(?:model|metadata)\.json["'`]/g)) found.push(tmNormBase(match[1]));
+  } catch (error) {
+    // 한국어 주석: 자동 검색 실패는 아래의 모델 파일 직접 선택으로 이어집니다.
+  }
   return found;
 }
-// 한국어 주석: 여러 후보 폴더를 차례로 확인해 metadata.json을 찾습니다.
 async function tmFindBase(tried) {
   const bases = [];
-  for (const b of [...await tmBasesFromIndex(), ...TM_BASES]) if (!bases.includes(b)) bases.push(b);
-  for (const b of bases) {
-    tried.push(b);
-    try { const r = await fetch(b + "metadata.json", { cache: "no-store" }); if (!r.ok) continue; const j = await r.json(); if (j && Array.isArray(j.labels)) return { base: b, meta: j }; } catch (e) { }
+  for (const base of [...await tmBasesFromIndex(), ...TM_BASES]) if (!bases.includes(base)) bases.push(base);
+  for (const base of bases) {
+    tried.push(base);
+    try {
+      const response = await fetch(base + "metadata.json", { cache: "no-store" });
+      if (!response.ok) continue;
+      const metadata = await response.json();
+      if (metadata && Array.isArray(metadata.labels)) return { base, meta: metadata };
+    } catch (error) {
+      // 한국어 주석: 다음 모델 폴더 후보를 확인합니다.
+    }
   }
   return null;
 }
-// 한국어 주석: 메타데이터를 보고 이미지 모델인지 포즈 모델인지 구분합니다.
-function tmKindOf(meta) { return /pose/i.test((meta && meta.packageName) || "") ? "pose" : "image"; }
-// 한국어 주석: 모델과 클래스 이름을 화면에서 사용할 상태로 저장합니다.
+function tmKindOf(metadata) { return /pose/i.test((metadata && metadata.packageName) || "") ? "pose" : "image"; }
 function tmFinish(model, kind) {
-  // 메타데이터에 종류가 없을 때를 대비해 입력 모양으로 한 번 더 확인 ([224,224,3] 이면 이미지, [14739] 같은 한 줄이면 포즈)
-  const shp = (model.model && model.model.inputs && model.model.inputs[0]) ? model.model.inputs[0].shape : null;
-  if (shp && shp.length === 4) kind = "image";
-  if (shp && shp.length === 2) kind = "pose";
+  const shape = model.model && model.model.inputs && model.model.inputs[0] ? model.model.inputs[0].shape : null;
+  if (shape && shape.length === 4) kind = "image";
+  if (shape && shape.length === 2) kind = "pose";
   TM.model = model; TM.kind = kind; TM.labels = model.getClassLabels();
 }
-// 한국어 주석: 모델 종류에 맞는 티처블 머신 라이브러리를 선택합니다.
 function tmLib(kind) {
-  if (kind === "pose") { if (typeof tmPose === "undefined") throw new Error("포즈 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하세요."); return tmPose; }
+  if (kind === "pose") {
+    if (typeof tmPose === "undefined") throw new Error("포즈 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하세요.");
+    return tmPose;
+  }
   if (typeof tmImage === "undefined") throw new Error("이미지 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인하세요.");
   return tmImage;
 }
-// 한국어 주석: 웹 주소에 공개된 모델을 자동으로 불러옵니다.
-async function tmLoadAuto() {            // 반환: {ok, how, tried}
+async function tmLoadAuto() {
   const tried = [];
   if (location.protocol === "file:") return { ok: false, local: true, tried };
   const hit = await tmFindBase(tried);
   if (!hit) return { ok: false, tried };
   const kind = tmKindOf(hit.meta);
-  const m = await tmLib(kind).load(hit.base + "model.json", hit.base + "metadata.json");
-  tmFinish(m, kind);
+  const model = await tmLib(kind).load(hit.base + "model.json", hit.base + "metadata.json");
+  tmFinish(model, kind);
   return { ok: true, how: hit.base === "./" ? "같은 폴더" : hit.base, tried };
 }
-// 한국어 주석: 선생님이 고른 모델 파일 세 개를 브라우저 안에서 불러옵니다.
 async function tmLoadFiles(fileList) {
-  const fs = Array.from(fileList);
-  const pick = (test) => fs.find(f => test(f.name.toLowerCase()));
-  const mj = pick(n => n === "model.json" || (n.endsWith(".json") && n.includes("model")));
-  const md = pick(n => n === "metadata.json" || (n.endsWith(".json") && n.includes("meta")));
-  const wb = pick(n => n.endsWith(".bin"));
-  if (!mj || !md || !wb) throw new Error("세 파일(model.json, metadata.json, weights.bin)을 한꺼번에 골라야 합니다. 지금 고른 것: " + fs.map(f => f.name).join(", "));
-  let meta = {}; try { meta = JSON.parse(await md.text()); } catch (e) { }
-  const kind = tmKindOf(meta);
-  const m = await tmLib(kind).loadFromFiles(mj, wb, md);
-  tmFinish(m, kind);
+  const files = Array.from(fileList);
+  const pick = (test) => files.find(file => test(file.name.toLowerCase()));
+  const modelJson = pick(name => name === "model.json" || (name.endsWith(".json") && name.includes("model")));
+  const metadataJson = pick(name => name === "metadata.json" || (name.endsWith(".json") && name.includes("meta")));
+  const weights = pick(name => name.endsWith(".bin"));
+  if (!modelJson || !metadataJson || !weights) throw new Error("세 파일(model.json, metadata.json, weights.bin)을 한꺼번에 골라야 합니다. 지금 고른 것: " + files.map(file => file.name).join(", "));
+  let metadata = {};
+  try { metadata = JSON.parse(await metadataJson.text()); } catch (error) { /* 한국어 주석: 모델 라이브러리가 파일 오류를 안내하도록 둡니다. */ }
+  const kind = tmKindOf(metadata);
+  tmFinish(await tmLib(kind).loadFromFiles(modelJson, weights, metadataJson), kind);
 }
-// 한국어 주석: 사진 또는 직접 그린 캔버스를 모델에 넣어 확률을 얻습니다.
-async function tmPredict(el) {            // 반환: 클래스 순서대로 확률 배열
-  let pred;
-  if (TM.kind === "pose") { const r = await TM.model.estimatePose(el, false); pred = await TM.model.predict(r.posenetOutput); }
-  else pred = await TM.model.predict(el);
-  return pred.map(p => p.probability);
+async function tmPredict(element) {
+  let prediction;
+  if (TM.kind === "pose") {
+    const pose = await TM.model.estimatePose(element, false);
+    prediction = await TM.model.predict(pose.posenetOutput);
+  } else {
+    prediction = await TM.model.predict(element);
+  }
+  return prediction.map(item => item.probability);
 }
 
-
-// 한국어 주석: id로 화면 요소를 짧게 찾기 위한 도우미입니다.
-const $ = (id) => document.getElementById(id);
-// 한국어 주석: 주소의 grade 미리보기만 허용하며 판정 기준은 CONFIG.threshold를 사용합니다.
-// 한국어 주석: 주소에 붙은 미리보기 옵션을 읽습니다.
+// 한국어 주석: 화면 요소와 학년군 설정을 준비합니다.
+const $ = id => document.getElementById(id);
 const qs = new URLSearchParams(location.search);
 const GRADE = ["low", "mid", "high"].includes(qs.get("grade")) ? qs.get("grade") : CONFIG.grade;
-const TH = CONFIG.threshold; // 한국어 주석: 판정 기준은 CONFIG의 활동지 테스트 값만 사용합니다.
+const TH = CONFIG.threshold;
 document.body.classList.add(GRADE);
-$("title").textContent = CONFIG.title; document.title = CONFIG.title;
+$("title").textContent = CONFIG.title;
+document.title = CONFIG.title;
 $("notice").textContent = CONFIG.notice;
-let stream = null; // 한국어 주석: 현재 카메라 스트림을 기억합니다.
-const draw = $("draw"); // 한국어 주석: 학생이 직접 그릴 캔버스를 가져옵니다.
-const drawContext = draw.getContext("2d"); // 한국어 주석: 캔버스에 선을 그릴 도구를 준비합니다.
-let drawing = false; // 한국어 주석: 현재 곧은 선을 만들고 있는지 기록합니다.
-let drawStart = null; // 한국어 주석: 곧은 선의 시작점을 기억합니다.
-let drawLines = []; // 한국어 주석: 완성한 선분들을 저장합니다.
-function drawPoint(ev) { const rect = draw.getBoundingClientRect(); return { x: (ev.clientX - rect.left) * draw.width / rect.width, y: (ev.clientY - rect.top) * draw.height / rect.height }; } // 한국어 주석: 화면 좌표를 캔버스 좌표로 바꿉니다.
-function renderDraw(preview) { drawContext.fillStyle = "#fff"; drawContext.fillRect(0, 0, draw.width, draw.height); drawContext.strokeStyle = "#10233F"; drawContext.lineWidth = 6; drawContext.lineCap = "round"; drawContext.lineJoin = "round"; [...drawLines, ...(preview ? [preview] : [])].forEach(line => { drawContext.beginPath(); drawContext.moveTo(line.start.x, line.start.y); drawContext.lineTo(line.end.x, line.end.y); drawContext.stroke(); }); } // 한국어 주석: 저장된 선과 현재 미리보기 선을 모두 곧게 그립니다.
-function clearDraw() { drawLines = []; drawStart = null; drawing = false; renderDraw(); } // 한국어 주석: 그린 선을 모두 지우고 흰 캔버스로 되돌립니다.
-draw.addEventListener("pointerdown", (ev) => { drawing = true; draw.setPointerCapture(ev.pointerId); drawStart = drawPoint(ev); }); // 한국어 주석: 선을 시작할 위치를 정합니다.
-draw.addEventListener("pointermove", (ev) => { if (!drawing || !drawStart) return; renderDraw({ start: drawStart, end: drawPoint(ev) }); }); // 한국어 주석: 움직이는 동안 시작점과 현재 위치를 잇는 곧은 선을 미리 봅니다.
-draw.addEventListener("pointerup", (ev) => { if (!drawing || !drawStart) return; const end = drawPoint(ev); const distance = Math.hypot(end.x - drawStart.x, end.y - drawStart.y); if (distance > 8) drawLines.push({ start: drawStart, end }); drawing = false; drawStart = null; renderDraw(); }); // 한국어 주석: 손을 떼면 충분히 긴 곧은 선분을 저장합니다.
-draw.addEventListener("pointercancel", () => { drawing = false; drawStart = null; renderDraw(); }); // 한국어 주석: 입력이 취소되면 미리보기 선을 없앱니다.
-clearDraw(); // 한국어 주석: 처음 열 때 분석 가능한 흰 캔버스를 준비합니다. // 한국어 주석: 처음 열 때 분석 가능한 흰 캔버스를 준비합니다.
+let currentActivity = "classify";
+let selectedTarget = null;
+let stream = null;
 
-// 한국어 주석: 모델을 준비한 뒤 카메라·사진·그리기 버튼을 활성화합니다.
+// 한국어 주석: 두 활동의 탭을 전환하고 카메라 상태를 정리합니다.
+function showActivity(activity) {
+  currentActivity = activity;
+  const classify = activity === "classify";
+  // 한국어 주석: 화면이 바뀌어도 같은 입력 영역을 현재 활동의 왼쪽 열에 보여 줍니다.
+  (classify ? $("classifyLeft") : $("drawWorkspace")).appendChild($("workspace"));
+  $("activityClassify").hidden = !classify;
+  $("activityDraw").hidden = classify;
+  $("tabClassify").classList.toggle("active", classify);
+  $("tabDraw").classList.toggle("active", !classify);
+  $("tabClassify").setAttribute("aria-selected", String(classify));
+  $("tabDraw").setAttribute("aria-selected", String(!classify));
+  $("result").hidden = true;
+  $("result2").hidden = true;
+  stopCam();
+}
+$("tabClassify").addEventListener("click", () => showActivity("classify"));
+$("tabDraw").addEventListener("click", () => showActivity("draw"));
+
+// 한국어 주석: 활동 2에서 학생이 선택한 목표 각도를 표시합니다.
+document.querySelectorAll(".target-button").forEach(button => {
+  button.addEventListener("click", () => {
+    selectedTarget = button.dataset.target;
+    document.querySelectorAll(".target-button").forEach(item => item.classList.toggle("selected", item === button));
+    $("result2").hidden = true;
+  });
+});
+
+// 한국어 주석: 직접 그리기 캔버스에 곧은 두 선을 그립니다.
+const draw = $("draw");
+const drawContext = draw.getContext("2d");
+let drawing = false;
+let drawStart = null;
+let drawLines = [];
+function drawPoint(event) {
+  const rect = draw.getBoundingClientRect();
+  return { x: (event.clientX - rect.left) * draw.width / rect.width, y: (event.clientY - rect.top) * draw.height / rect.height };
+}
+function renderDraw(preview) {
+  drawContext.fillStyle = "#fff";
+  drawContext.fillRect(0, 0, draw.width, draw.height);
+  drawContext.strokeStyle = "#10233F";
+  drawContext.lineWidth = 6;
+  drawContext.lineCap = "round";
+  drawContext.lineJoin = "round";
+  [...drawLines, ...(preview ? [preview] : [])].forEach(line => {
+    drawContext.beginPath();
+    drawContext.moveTo(line.start.x, line.start.y);
+    drawContext.lineTo(line.end.x, line.end.y);
+    drawContext.stroke();
+  });
+}
+function clearDraw() { drawLines = []; drawStart = null; drawing = false; renderDraw(); }
+draw.addEventListener("pointerdown", event => { drawing = true; draw.setPointerCapture(event.pointerId); drawStart = drawPoint(event); });
+draw.addEventListener("pointermove", event => { if (drawing && drawStart) renderDraw({ start: drawStart, end: drawPoint(event) }); });
+draw.addEventListener("pointerup", event => {
+  if (!drawing || !drawStart) return;
+  const end = drawPoint(event);
+  if (Math.hypot(end.x - drawStart.x, end.y - drawStart.y) > 8) drawLines.push({ start: drawStart, end });
+  drawing = false; drawStart = null; renderDraw();
+});
+draw.addEventListener("pointercancel", () => { drawing = false; drawStart = null; renderDraw(); });
+clearDraw();
+
+// 한국어 주석: 모델이 준비되면 두 활동의 입력 버튼을 모두 사용할 수 있게 합니다.
 function ready(how) {
   $("msg").textContent = "모델을 불러왔습니다 (" + how + "). 클래스: " + TM.labels.join(", ");
-  const missing = TM.labels.filter(l => !CONFIG.classes[l]);
-  $("cfg").textContent = "학년군 " + GRADE + ", 기준값 " + TH.toFixed(2) + (missing.length ? ". CONFIG 에 문구가 없는 클래스: " + missing.join(", ") + " (이름 그대로 보여 줌)" : ". 모든 클래스에 문구가 있습니다.");
-  $("cam").disabled = false; $("pick").disabled = false; $("drawMode").disabled = false; // 한국어 주석: 모델을 준비한 뒤 직접 그리기도 활성화합니다.
+  const missing = TM.labels.filter(label => !CONFIG.classes[label]);
+  $("cfg").textContent = "학년군 " + GRADE + ", 기준값 " + TH.toFixed(2) + (missing.length ? ". CONFIG에 문구가 없는 클래스: " + missing.join(", ") : ". 모든 클래스에 문구가 있습니다.");
+  ["cam", "pick", "drawMode"].forEach(id => $(id).disabled = false);
 }
 (async () => {
   try {
-    const r = await tmLoadAuto();
-    if (r.ok) ready(r.how);
-    else { $("msg").textContent = r.local ? "파일을 직접 열었습니다. 아래에서 모델 파일 3개를 고르세요." : "이 주소 아래에서 모델을 찾지 못했습니다. 아래에서 세 파일을 고르세요."; $("teacher").open = true; }
-  } catch (e) { $("msg").textContent = "모델을 읽지 못했습니다. " + e.message; $("teacher").open = true; }
+    const result = await tmLoadAuto();
+    if (result.ok) ready(result.how);
+    else {
+      $("msg").textContent = result.local ? "파일을 직접 열었습니다. 아래에서 모델 파일 3개를 고르세요." : "이 주소 아래에서 모델을 찾지 못했습니다. 아래에서 세 파일을 고르세요.";
+      $("teacher").open = true;
+    }
+  } catch (error) {
+    $("msg").textContent = "모델을 읽지 못했습니다. " + error.message;
+    $("teacher").open = true;
+  }
 })();
-// 한국어 주석: 선생님이 선택한 모델 파일을 읽기 시작합니다.
-$("mfiles").addEventListener("change", async (ev) => {
-  try { $("msg").textContent = "모델을 읽는 중..."; await tmLoadFiles(ev.target.files); ready("고른 파일"); }
-  catch (e) { $("msg").textContent = "모델을 읽지 못했습니다. " + e.message; }
-});
-
-$("drawMode").addEventListener("click", () => { stopCam(); $("frame").hidden = true; $("drawbox").hidden = false; $("result").hidden = true; clearDraw(); }); // 한국어 주석: 검은 카메라 영역을 숨기고 같은 자리에 직접 그리기 영역을 엽니다.
-$("clearDraw").addEventListener("click", clearDraw); // 한국어 주석: 지우기 버튼으로 흰 캔버스를 다시 만듭니다.
-$("analyzeDraw").addEventListener("click", async () => { $("drawbox").hidden = false; await judge(draw); }); // 한국어 주석: 그린 캔버스를 기존 분류 함수로 분석합니다.
-
-// ---------- 카메라 ----------
-// 한국어 주석: 후면 카메라를 우선 요청하고 사용할 수 없으면 안내합니다.
-$("cam").addEventListener("click", async () => {
-  $("frame").hidden = false; $("drawbox").hidden = true; // 한국어 주석: 카메라를 선택하면 카메라 영역을 다시 보여 줍니다.
-  if (stream) { stopCam(); return; }
-  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { say("이 주소에서는 카메라를 쓸 수 없어요. 사진 고르기를 눌러 주세요.", true); return; }
+$("mfiles").addEventListener("change", async event => {
   try {
-    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });   // 뒤 카메라를 먼저 찾고, 없으면 있는 카메라
-    const v = $("video"); v.srcObject = stream; v.hidden = false; $("still").hidden = true; $("empty").hidden = true;
-    $("shot").hidden = false; $("cam").textContent = "카메라 끄기"; $("result").hidden = true;
-  } catch (e) {
-    say(e.name === "NotAllowedError" ? "카메라를 쓸 수 없어요. 주소창의 자물쇠를 눌러 카메라를 허용하거나, 사진 고르기를 눌러 주세요."
-      : e.name === "NotFoundError" ? "카메라를 찾지 못했어요. 사진 고르기를 눌러 주세요." : "카메라를 켜지 못했어요. 사진 고르기를 눌러 주세요.", true);
+    $("msg").textContent = "모델을 읽는 중...";
+    await tmLoadFiles(event.target.files);
+    ready("고른 파일");
+  } catch (error) {
+    $("msg").textContent = "모델을 읽지 못했습니다. " + error.message;
   }
 });
-// 한국어 주석: 카메라 영상과 연결된 자원을 정리합니다.
-function stopCam() { if (stream) stream.getTracks().forEach(t => t.stop()); stream = null; $("video").hidden = true; $("shot").hidden = true; $("cam").textContent = "카메라 켜기"; }
-// 한국어 주석: 카메라 화면의 가운데 정사각형을 캡처해 분석합니다.
-$("shot").addEventListener("click", async () => {
-  const v = $("video"), c = $("still"); const s = Math.min(v.videoWidth, v.videoHeight); if (!s) return;
-  c.width = 480; c.height = 480; c.getContext("2d").drawImage(v, (v.videoWidth - s) / 2, (v.videoHeight - s) / 2, s, s, 0, 0, 480, 480);   // 화면에 보이는 가운데 정사각형만
-  stopCam(); c.hidden = false; await judge(c);
-});
-// 한국어 주석: 사용자가 고른 사진을 캔버스에 옮겨 분석합니다.
-$("pick").addEventListener("change", (ev) => {
-  const f = ev.target.files[0]; if (!f) return;
-  const im = new Image();
-  im.onload = async () => {
-    stopCam(); $("frame").hidden = false; $("drawbox").hidden = true; // 한국어 주석: 사진 선택 시 카메라 영역 위치를 사용합니다.
-    const c = $("still"), s = Math.min(im.width, im.height);
-    c.width = 480; c.height = 480; c.getContext("2d").drawImage(im, (im.width - s) / 2, (im.height - s) / 2, s, s, 0, 0, 480, 480);
-    URL.revokeObjectURL(im.src); c.hidden = false; $("empty").hidden = true; await judge(c);
-  };
-  im.src = URL.createObjectURL(f); ev.target.value = "";
-});
 
-// ---------- 판정과 문구 ----------
-// 한국어 주석: 카메라 상태처럼 분류 결과가 아닌 짧은 안내를 표시합니다.
-function say(text, plain) { const r = $("result"); r.hidden = false; r.className = "result" + (plain ? "" : " unsure"); r.innerHTML = "<p class=\"hint\" style=\"margin:0\"></p>"; r.firstChild.textContent = text; }
-// 한국어 주석: 사용자가 입력한 문자열을 HTML로 안전하게 표시합니다.
-function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
-// 한국어 주석: 입력 화면을 분석하고 확률 기준에 맞는 학생용 결과를 만듭니다.
+// 한국어 주석: 카메라를 끄고 영상 요소를 초기화합니다.
+function stopCam() {
+  if (stream) stream.getTracks().forEach(track => track.stop());
+  stream = null;
+  $("video").hidden = true;
+  $("shot").hidden = true;
+  $("cam").textContent = "카메라 켜기";
+}
+function setInputMode(mode) {
+  $("frame").hidden = mode === "draw";
+  $("drawbox").hidden = mode !== "draw";
+  if (mode === "draw") { stopCam(); clearDraw(); }
+  $("result").hidden = true;
+  $("result2").hidden = true;
+}
+async function startCamera() {
+  setInputMode("camera");
+  if (stream) { stopCam(); return; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+    say("이 주소에서는 카메라를 쓸 수 없어요. 사진 고르기를 눌러 주세요.", true);
+    return;
+  }
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" }, audio: false });
+    const video = $("video");
+    video.srcObject = stream;
+    video.hidden = false;
+    $("still").hidden = true;
+    $("empty").hidden = true;
+    $("shot").hidden = currentActivity !== "classify";
+    $("cam").textContent = "카메라 끄기";
+  } catch (error) {
+    say(error.name === "NotAllowedError" ? "카메라를 쓸 수 없어요. 주소창의 자물쇠를 눌러 카메라를 허용하거나, 사진 고르기를 눌러 주세요." : error.name === "NotFoundError" ? "카메라를 찾지 못했어요. 사진 고르기를 눌러 주세요." : "카메라를 켜지 못했어요. 사진 고르기를 눌러 주세요.", true);
+  }
+}
+$("cam").addEventListener("click", startCamera);
+
+// 한국어 주석: 카메라 영상의 가운데 부분을 캡처해 현재 활동에 맞게 판정합니다.
+async function captureCamera() {
+  const video = $("video");
+  const canvas = $("still");
+  const size = Math.min(video.videoWidth, video.videoHeight);
+  if (!size) return;
+  canvas.width = 480; canvas.height = 480;
+  canvas.getContext("2d").drawImage(video, (video.videoWidth - size) / 2, (video.videoHeight - size) / 2, size, size, 0, 0, 480, 480);
+  stopCam();
+  canvas.hidden = false;
+  await judge(canvas);
+}
+$("shot").addEventListener("click", captureCamera);
+
+// 한국어 주석: 선택한 사진을 브라우저 안에서만 읽어 캔버스에 표시합니다.
+function connectPicker(id) {
+  $(id).addEventListener("change", event => {
+    const file = event.target.files[0];
+    if (!file) return;
+    const image = new Image();
+    image.onload = async () => {
+      stopCam();
+      setInputMode("photo");
+      const canvas = $("still");
+      const size = Math.min(image.width, image.height);
+      canvas.width = 480; canvas.height = 480;
+      canvas.getContext("2d").drawImage(image, (image.width - size) / 2, (image.height - size) / 2, size, size, 0, 0, 480, 480);
+      URL.revokeObjectURL(image.src);
+      canvas.hidden = false;
+      $("empty").hidden = true;
+      await judge(canvas);
+    };
+    image.src = URL.createObjectURL(file);
+    event.target.value = "";
+  });
+}
+connectPicker("pick");
+
+// 한국어 주석: 직접 그리기 영역을 열고 그린 그림을 제출합니다.
+function openDrawMode() { setInputMode("draw"); }
+$("drawMode").addEventListener("click", openDrawMode);
+$("clearDraw").addEventListener("click", clearDraw);
+$("analyzeDraw").addEventListener("click", () => judge(draw));
+
+// 한국어 주석: 짧은 안내 문구를 결과 카드에 안전하게 표시합니다.
+function esc(text) { const element = document.createElement("div"); element.textContent = text; return element.innerHTML; }
+function say(text, plain) {
+  const result = currentActivity === "classify" ? $("result") : $("result2");
+  result.hidden = false;
+  result.className = "result" + (plain ? "" : " unsure");
+  result.innerHTML = "<p class=\"hint\" style=\"margin:0\"></p>";
+  result.firstChild.textContent = text;
+}
+function classInfo(label) { return CONFIG.classes[label] || { key: "", say: label + " 같아요", hint: "" }; }
+function topBars(order, probabilities) {
+  if (GRADE === "low") return "";
+  let html = "<div class=\"bars\" aria-label=\"AI의 생각\">";
+  order.slice(0, 3).forEach((index, position) => {
+    const name = classInfo(TM.labels[index]).say.replace(/ 같아요$/, "");
+    html += "<div class=\"barrow" + (position === 0 ? " top" : "") + "\"><span>" + esc(name) + "</span><div class=\"track\"><div class=\"fill\" style=\"width:" + Math.round(probabilities[index] * 100) + "%\"></div></div></div>";
+  });
+  return html + "</div>";
+}
+
+// 한국어 주석: 활동 2의 목표와 AI가 가장 높게 판단한 각도를 비교해 피드백합니다.
+function renderDrawFeedback(predictedKey) {
+  const result = $("result2");
+  if (!selectedTarget) {
+    result.className = "result unsure";
+    result.innerHTML = "<div class=\"say\"><span class=\"icon\">☝️</span><b>먼저 목표 각도를 골라 주세요.</b></div>";
+    result.hidden = false;
+    return;
+  }
+  const correct = selectedTarget === predictedKey;
+  const feedback = correct
+    ? (selectedTarget === "acute" ? "예각의 특징을 잘 살펴보고 그렸어요! 정말 잘했어요." : selectedTarget === "right" ? "두 변이 직각으로 만나는 모습을 잘 그렸어요! 정말 잘했어요." : "직각보다 큰 둔각의 특징을 잘 표현했어요! 정말 잘했어요.")
+    : (selectedTarget === "acute" ? "직각과 비교해서 직각보다 작은지 확인해 봅시다." : selectedTarget === "right" ? "삼각자의 직각 부분과 비교하여 직각과 일치하는지 다시 확인해 봅시다." : "직각과 비교해서 직각보다 큰지 확인해 봅시다.");
+  result.className = "result " + (correct ? "correct" : "incorrect");
+  result.innerHTML = "<div class=\"say\"><span class=\"icon\">" + (correct ? "🌟" : "🔎") + "</span><b>" + (correct ? "정답인 것 같아요!" : "오답인 것 같아요.") + "</b></div><p class=\"feedback\">" + esc(feedback) + "</p>";
+  result.hidden = false;
+}
+
+// 한국어 주석: 활동 1은 CONFIG 기준값을 적용하고 활동 2는 가장 높은 클래스를 목표와 비교합니다.
 async function judge(canvas) {
   if (!TM.model) { say("모델을 아직 못 불러왔어요. 선생님께 알려 주세요.", true); return; }
-  let p;
-  try { p = await tmPredict(canvas); } catch (e) { say("사진을 읽지 못했어요. 다시 찍어 볼까요?", true); return; }
-  // 한국어 주석: 확률이 높은 클래스부터 순서를 정합니다.
-  const order = p.map((v, i) => i).sort((a, b) => p[b] - p[a]);
-  const top = order[0], r = $("result"); r.hidden = false;
-  // 한국어 주석: 기준값보다 낮으면 특정 각도라고 단정하지 않습니다.
-  if (p[top] < TH) {
-    r.className = "result unsure";
-    r.innerHTML = "<div class=\"say\"><span class=\"icon\">🤔</span><b>" + esc(CONFIG.unsure.say) + "</b></div><ul class=\"tips\">" + CONFIG.unsure.tips.map(t => "<li>" + esc(t) + "</li>").join("") + "</ul>";
+  let probabilities;
+  try {
+    probabilities = await tmPredict(canvas);
+  } catch (error) {
+    say("사진을 읽지 못했어요. 다시 찍어 볼까요?", true);
+    return;
+  }
+  const order = probabilities.map((value, index) => index).sort((a, b) => probabilities[b] - probabilities[a]);
+  const top = order[0];
+  if (currentActivity === "draw") {
+    renderDrawFeedback(classInfo(TM.labels[top]).key);
+    if (GRADE !== "low") $("result2").insertAdjacentHTML("beforeend", topBars(order, probabilities));
+    return;
+  }
+  const result = $("result");
+  result.hidden = false;
+  if (probabilities[top] < TH) {
+    result.className = "result unsure";
+    result.innerHTML = "<div class=\"say\"><span class=\"icon\">🤔</span><b>" + esc(CONFIG.unsure.say) + "</b></div><ul class=\"tips\">" + CONFIG.unsure.tips.map(tip => "<li>" + esc(tip) + "</li>").join("") + "</ul>";
   } else {
-    const c = CONFIG.classes[TM.labels[top]] || { say: TM.labels[top] + " 같아요", hint: "" }; // 한국어 주석: 등록되지 않은 클래스도 안전하게 표시합니다.
-    r.className = "result know";
-    r.innerHTML = "<div class=\"say\"><b>" + esc(c.say) + "</b></div>" + (c.hint ? "<p class=\"hint\">" + esc(c.hint) + "</p>" : ""); // 한국어 주석: 요청한 문구와 학생 행동 안내만 결과에 표시합니다.
+    const info = classInfo(TM.labels[top]);
+    result.className = "result know";
+    result.innerHTML = "<div class=\"say\"><b>" + esc(info.say) + "</b></div>" + (info.hint ? "<p class=\"hint\">" + esc(info.hint) + "</p>" : "");
   }
-  // 한국어 주석: 숫자 대신 상위 세 클래스의 막대 길이로 비교하게 합니다.
-  if (GRADE !== "low") {
-    let h = "<div class=\"bars\" aria-label=\"AI의 생각\">";
-    order.slice(0, 3).forEach((i, k) => {
-      const name = (CONFIG.classes[TM.labels[i]] ? CONFIG.classes[TM.labels[i]].say.replace(/ 같아요$/, "") : TM.labels[i]);
-      h += "<div class=\"barrow" + (k === 0 ? " top" : "") + "\"><span>" + esc(name) + "</span><div class=\"track\"><div class=\"fill\" style=\"width:" + Math.round(p[i] * 100) + "%\"></div></div><span>" + "</span></div>"; // 한국어 주석: 확률 숫자 없이 막대 길이로만 비교하게 합니다.
-    });
-    h += "</div>";
-    if (GRADE === "high") h += "<div class=\"q\">" + esc(CONFIG.question) + "</div>";
-    r.insertAdjacentHTML("beforeend", h);
-  }
+  result.insertAdjacentHTML("beforeend", topBars(order, probabilities));
 }
 </script>
 </body>
