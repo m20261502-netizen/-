@@ -15,6 +15,8 @@
 const CONFIG = {
   title: "각도 분류 도우미",
   grade: "mid",
+  // AI가 가장 높은 클래스의 확률이 0.75(75%) 이상일 때만 결과를 확실한 판정으로 표시합니다.
+  // 75%보다 낮으면 "잘 모르겠어요"로 안내합니다. 값을 바꾸려면 이 숫자만 수정하세요.
   threshold: 0.75,
   classes: {
     "acute angle": { key: "acute", say: "예각 같아요", hint: "AI는 예각으로 짐작하고 있어요. 삼각자/각도기로 진짜 맞는지 확인해 볼까요?" },
@@ -265,6 +267,7 @@ async function tmPredict(element) {
 const $ = id => document.getElementById(id);
 const qs = new URLSearchParams(location.search);
 const GRADE = ["low", "mid", "high"].includes(qs.get("grade")) ? qs.get("grade") : CONFIG.grade;
+// 위 threshold 값을 실제 판정에 사용할 기준값으로 가져옵니다.
 const TH = CONFIG.threshold;
 document.body.classList.add(GRADE);
 $("title").textContent = CONFIG.title;
@@ -516,6 +519,7 @@ async function judge(canvas) {
   }
   const result = $("result");
   result.hidden = false;
+  // 가장 높은 확률이 기준값보다 낮으면 AI가 확신하지 못한 것으로 처리합니다.
   if (probabilities[top] < TH) {
     result.className = "result unsure";
     result.innerHTML = "<div class=\"say\"><span class=\"icon\">🤔</span><b>" + esc(CONFIG.unsure.say) + "</b></div><ul class=\"tips\">" + CONFIG.unsure.tips.map(tip => "<li>" + esc(tip) + "</li>").join("") + "</ul><p class=\"result-caution\">AI의 생각이 나와 다를 수 있어요. 삼각자를 대어 헷갈리는 부분을 직접 찾아봐요!</p>";
