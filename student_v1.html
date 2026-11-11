@@ -29,7 +29,7 @@ const CONFIG = {
     tips: [
       "각도가 화면 가운데에 크게 보이게 놓아요",
       "창문을 등지고 밝은 곳에서 선이 잘 보이게 찍어요",
-      "각도 도형 하나만 한 번에 보여 줘요"
+      "각도 도형 하나만 한 번에 보여주세요"
     ]
   },
   notice: "AI는 틀릴 수 있어요. 헷갈리면 선생님께 물어봐요."
@@ -413,6 +413,33 @@ $("cameraFacing").addEventListener("change", () => {
   startCamera();
 });
 
+// 사진의 선명도를 브라우저 안에서만 확인합니다. 값이 낮으면 초점이 흐린 사진으로 안내합니다.
+function isBlurry(canvas) {
+  const { width, height } = canvas;
+  const data = canvas.getContext("2d").getImageData(0, 0, width, height).data;
+  let total = 0;
+  let totalSquared = 0;
+  let count = 0;
+  const gray = (x, y) => {
+    const offset = (y * width + x) * 4;
+    return data[offset] * 0.299 + data[offset + 1] * 0.587 + data[offset + 2] * 0.114;
+  };
+  for (let y = 1; y < height - 1; y += 2) {
+    for (let x = 1; x < width - 1; x += 2) {
+      const laplacian = gray(x - 1, y) + gray(x + 1, y) + gray(x, y - 1) + gray(x, y + 1) - 4 * gray(x, y);
+      total += laplacian;
+      totalSquared += laplacian * laplacian;
+      count++;
+    }
+  }
+  const variance = totalSquared / count - (total / count) ** 2;
+  return variance < 18;
+}
+
+function showBlurMessage() {
+  say("잘 모르겠어요. 창문을 등지고 밝은 곳에서 선이 잘 보이게 찍어요.");
+}
+
 // 한국어 주석: 카메라 영상의 가운데 부분을 캡처해 현재 활동에 맞게 판정합니다.
 async function captureCamera() {
   const video = $("video");
@@ -423,6 +450,10 @@ async function captureCamera() {
   canvas.getContext("2d").drawImage(video, (video.videoWidth - size) / 2, (video.videoHeight - size) / 2, size, size, 0, 0, 480, 480);
   stopCam();
   canvas.hidden = false;
+  if (isBlurry(canvas)) {
+    showBlurMessage();
+    return;
+  }
   await judge(canvas);
 }
 $("shot").addEventListener("click", captureCamera);
@@ -443,6 +474,10 @@ function connectPicker(id) {
       URL.revokeObjectURL(image.src);
       canvas.hidden = false;
       $("empty").hidden = true;
+      if (isBlurry(canvas)) {
+        showBlurMessage();
+        return;
+      }
       await judge(canvas);
     };
     image.src = URL.createObjectURL(file);
