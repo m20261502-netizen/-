@@ -434,7 +434,7 @@ function isBlurry(canvas) {
     }
   }
   const variance = totalSquared / count - (total / count) ** 2;
-  return variance < 18;
+  return variance < 5;
 }
 
 function showBlurMessage() {
