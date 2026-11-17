@@ -50,6 +50,18 @@ input[type=text]:focus,input[type=url]:focus,select:focus,textarea:focus{outline
 .preview{border:2px solid #b9e1f1;border-radius:18px;background:#f4fcff}
 @media(max-width:560px){.panel{border-radius:20px}}
 
+/* 16:9 화면에서 공간을 넓게 활용하는 가로형 레이아웃입니다. */
+@media(min-width:900px){
+  main{max-width:1440px;padding:28px 32px 52px}
+  #model-panel{display:grid;grid-template-columns:minmax(210px,.7fr) minmax(0,1.8fr);column-gap:28px;align-items:center}
+  #model-panel h2{grid-row:span 2;margin:0}
+  #model-panel p{margin:0}
+  #model-panel .row{grid-column:2}
+  #model-panel #model-status{grid-column:2;margin:0}
+  .teacher-evaluation .eval-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:22px}
+  .teacher-evaluation .eval-card{min-height:180px}
+}
+
 </style>
 </head>
 <body>
