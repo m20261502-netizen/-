@@ -511,8 +511,15 @@ function say(text, plain) {
 function classInfo(label) { return CONFIG.classes[label] || { key: "", say: label + " 같아요", hint: "" }; }
 // 한국어 주석: AI 결과를 직접 확인하도록 학생에게 안내하는 문구를 결과 카드에 덧붙입니다.
 function resultNotes(info) {
+  const checkHint = info.key === "acute"
+    ? "AI의 생각이 나와 다를 수 있어요. 삼각자의 직각 부분을 대어 직각보다 작은지 직접 확인해봐요!"
+    : info.key === "right"
+      ? "AI의 생각이 나와 다를 수 있어요. 삼각자의 직각 부분을 대어 직각과 같은지 직접 확인해봐요!"
+      : info.key === "obtuse"
+        ? "AI의 생각이 나와 다를 수 있어요. 삼각자의 직각 부분을 대어 직각보다 큰지 직접 확인해봐요!"
+        : "AI의 생각이 나와 다를 수 있어요. 삼각자를 대어 헷갈리는 부분을 직접 찾아봐요!";
   return "<p class=\"result-note\">" + esc(info.hint) + "</p>" +
-    "<p class=\"result-caution\">AI의 생각이 나와 다를 수 있어요. 삼각자를 대어 헷갈리는 부분을 직접 찾아봐요!</p>";
+    "<p class=\"result-caution\">" + checkHint + "</p>";
 }
 function topBars(order, probabilities) {
   let html = "<div class=\"bars\" aria-label=\"AI의 생각\">";
