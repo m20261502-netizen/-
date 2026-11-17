@@ -26,6 +26,30 @@ body{background:#f3f6fb}header{display:none}main{max-width:1440px;margin:0 auto;
 .mode-choice{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:16px 0}.mode-card{display:flex;align-items:flex-start;gap:10px;padding:15px;border:1px solid #d8dbe5;border-radius:12px;cursor:pointer;background:#fff}.mode-card:has(input:checked){border:2px solid #7047e8;background:#f7f4ff}.mode-card input{margin-top:4px;accent-color:#7047e8}.mode-card strong,.mode-card small{display:block}.mode-card small{font-weight:400;color:var(--muted);margin-top:5px;line-height:1.5}@media(max-width:650px){.mode-choice{grid-template-columns:1fr}}
 .app-shell,.teacher-ai-panel{display:none!important}
 
+/* 학생 화면을 하늘색 중심의 밝고 친근한 학습 공간으로 꾸밉니다. */
+:root{--ink:#19324d;--muted:#5e7892;--line:#b9def2;--paper:#eaf8ff;--blue:#36a9e8;--blue2:#e1f5ff;--green:#168c78;--red:#d45b6a;--amber:#a87517}
+body{background:linear-gradient(180deg,#bfeeff 0,#eaf8ff 42%,#f8fcff 100%);color:var(--ink)}
+header{display:block;background:linear-gradient(135deg,#45b9ed,#78d6f5);border:0;border-radius:0 0 34px 34px;padding:30px 18px 34px;box-shadow:0 8px 24px #258fbe26;position:relative;overflow:hidden}
+header:after{content:"☁️  ☁️";position:absolute;right:7%;top:12px;font-size:30px;letter-spacing:16px;opacity:.72}
+header h1{position:relative;z-index:1;color:#fff;text-shadow:0 2px 0 #208ec2;font-size:clamp(28px,5vw,40px)}
+header p{position:relative;z-index:1;color:#effbff;font-weight:600}
+main{max-width:1080px;padding:24px 16px 48px}
+.panel{border:2px solid #c5e8f7;border-radius:24px;padding:clamp(18px,3vw,30px);box-shadow:0 12px 30px #4ba9ce1c}
+h2{color:#176b94}h3{color:#287493}
+button{background:linear-gradient(135deg,#39aee9,#238fd1);border-radius:14px;box-shadow:0 5px 12px #218dcc2e;transition:transform .18s ease,box-shadow .18s ease}
+button:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 8px 16px #218dcc40}
+button.secondary{background:#e2f5fc;color:#176b94;border:1px solid #a9ddef}
+input[type=text],input[type=url],select,textarea{border:2px solid #c3e3f0;border-radius:14px;background:#fbfeff}
+input[type=text]:focus,input[type=url]:focus,select:focus,textarea:focus{outline:3px solid #8bdaf533;border-color:#42b4e6}
+.result-box{border:2px solid #bfe3f2;background:#f5fcff;border-radius:20px}
+.result-box.good{border-color:#9bdcca;background:#effcf8}.result-box.warn{border-color:#f1d38c;background:#fffaf0}.result-box.bad{border-color:#f0b5bf;background:#fff5f6}
+.pill{background:#d9f3ff;color:#16729d;border:1px solid #a9dff2}
+.notice{border-left:0;border:2px solid #bde4f2;background:#effaff;border-radius:16px}
+.bar-bg{background:#dff1f8}.bar-fill{background:linear-gradient(90deg,#67cff0,#2b9dda)}
+.canvas-wrap canvas{border:3px dashed #7ccbe8;border-radius:20px;background:#fbfeff}
+.preview{border:2px solid #b9e1f1;border-radius:18px;background:#f4fcff}
+@media(max-width:560px){.panel{border-radius:20px}}
+
 </style>
 </head>
 <body>
