@@ -561,6 +561,14 @@ async function judge(canvas) {
   const order = probabilities.map((value, index) => index).sort((a, b) => probabilities[b] - probabilities[a]);
   const top = order[0];
   if (currentActivity === "draw") {
+    if (probabilities[top] < TH) {
+      const result = $("result2");
+      result.className = "result unsure";
+      result.innerHTML = "<div class=\"say\"><span class=\"icon\">🤔</span><b>판단이 어려워요!</b></div><ul class=\"tips\">" + CONFIG.unsure.tips.map(tip => "<li>" + esc(tip) + "</li>").join("") + "</ul>";
+      result.insertAdjacentHTML("beforeend", (GRADE === "low" ? "" : topBars(order, probabilities)) + "<p class=\"result-caution\">AI의 생각이 나와 다를 수 있어요. 다시 확인해봐요!</p>");
+      result.hidden = false;
+      return;
+    }
     const info = classInfo(TM.labels[top]);
     renderDrawFeedback(info.key);
     $("result2").insertAdjacentHTML("beforeend", (GRADE === "low" ? "" : topBars(order, probabilities)) + resultNotes(info));
