@@ -31,7 +31,7 @@ table{border-collapse:collapse;width:100%;font-size:14px}th,td{border:1px solid 
 <label>또는 ZIP <input id="zip" type="file" accept=".zip"></label></div>
 <div class="controls"><label>기준값 <input id="threshold" type="number" min="0" max="1" step=".05" value=".50" style="width:90px"></label>
 <button id="run" disabled>정분류율·혼동행렬 계산</button><button id="csv" disabled>결과 CSV 저장</button></div>
-<p id="status" class="note">모델을 불러오세요.</p><p class="warn">주의: 이 화면의 숫자는 예측 실행 후에만 생성됩니다. 학습 데이터 장수는 Teachable Machine 모델 파일에 기록되지 않아 별도로 확인해야 합니다. 기준값 미만은 '모르겠어요'로 집계합니다.</p></section>
+<p id="status" class="note">모델을 불러오세요.</p></section>
 <section class="card" id="report" hidden><h2>2. 전체 평가 결과</h2><div class="statgrid" id="stats"></div>
 <p class="note" id="detail"></p><h2>3. 클래스별 정분류율</h2><div id="bars"></div>
 <h2>4. 혼동행렬</h2><p class="note">행: 실제 정답 / 열: 모델 예측. 기준값 미만은 '모르겠어요' 열에 표시합니다.</p><div class="scroller" id="matrix"></div>
