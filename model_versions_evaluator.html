@@ -62,12 +62,23 @@ $('load').onclick=async()=>{
  const v=$('version').value; $('run').disabled=true;setStatus(v+' 불러오는 중…');
  try{
   const base=v==='v7'?'./':'./'+v+'/';
-  const weightUrl=new URL(base+'weights.bin',window.location.href);
-  const weightResponse=await fetch(weightUrl,{cache:'no-store'});
-  if(!weightResponse.ok)throw new Error('weights.bin을 찾을 수 없습니다 ('+weightResponse.status+')');
-  const weightBlob=await weightResponse.blob();
-  if(weightBlob.size<1024)throw new Error('weights.bin이 손상되었거나 비어 있습니다 ('+weightBlob.size+'바이트)');
-  const m=await tmImage.load(base+'model.json',base+'metadata.json');
+  const repo='https://raw.githubusercontent.com/m20261502-netizen/-/main';
+  const [modelResponse,metadataResponse,weightResponse]=await Promise.all([
+   fetch(new URL(base+'model.json',window.location.href),{cache:'no-store'}),
+   fetch(new URL(base+'metadata.json',window.location.href),{cache:'no-store'}),
+   fetch(repo+'/weights.bin',{cache:'no-store'})
+  ]);
+  if(!modelResponse.ok)throw new Error('model.json을 찾을 수 없습니다 ('+modelResponse.status+')');
+  if(!metadataResponse.ok)throw new Error('metadata.json을 찾을 수 없습니다 ('+metadataResponse.status+')');
+  if(!weightResponse.ok)throw new Error('main/weights.bin을 찾을 수 없습니다 ('+weightResponse.status+')');
+  const [modelBlob,metadataBlob,weightBlob]=await Promise.all([
+   modelResponse.blob(),metadataResponse.blob(),weightResponse.blob()
+  ]);
+  if(weightBlob.size<1024)throw new Error('main/weights.bin이 손상되었거나 비어 있습니다 ('+weightBlob.size+'바이트)');
+  const modelFile=new File([modelBlob],'model.json',{type:'application/json'});
+  const metadataFile=new File([metadataBlob],'metadata.json',{type:'application/json'});
+  const weightFile=new File([weightBlob],'weights.bin',{type:'application/octet-stream'});
+  const m=await tmImage.loadFromFiles(modelFile,weightFile,metadataFile);
   updateLoaded(m,v);
  }catch(e){setStatus('자동 불러오기 실패 ('+v+'): '+e.message+'\n해당 버전의 원본 모델 파일 3개를 선택하세요.');}
 };
