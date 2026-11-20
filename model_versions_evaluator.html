@@ -62,6 +62,11 @@ $('load').onclick=async()=>{
  const v=$('version').value; $('run').disabled=true;setStatus(v+' 불러오는 중…');
  try{
   const base=v==='v7'?'./':'./'+v+'/';
+  const weightUrl=new URL(base+'weights.bin',window.location.href);
+  const weightResponse=await fetch(weightUrl,{cache:'no-store'});
+  if(!weightResponse.ok)throw new Error('weights.bin을 찾을 수 없습니다 ('+weightResponse.status+')');
+  const weightBlob=await weightResponse.blob();
+  if(weightBlob.size<1024)throw new Error('weights.bin이 손상되었거나 비어 있습니다 ('+weightBlob.size+'바이트)');
   const m=await tmImage.load(base+'model.json',base+'metadata.json');
   updateLoaded(m,v);
  }catch(e){setStatus('자동 불러오기 실패 ('+v+'): '+e.message+'\n해당 버전의 원본 모델 파일 3개를 선택하세요.');}
