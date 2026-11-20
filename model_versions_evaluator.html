@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>각 분류 모델 v1~v7 비교 평가</title>
+<style>
+:root{font-family:system-ui,"Malgun Gothic",sans-serif;color:#20314b;background:#f1f4f9}
+*{box-sizing:border-box}main{max-width:1200px;margin:25px auto;padding:0 15px}
+h1{font-size:26px}h2{font-size:19px;margin-top:0}.card{background:white;padding:20px;border:1px solid #dce4ef;border-radius:14px;margin:15px 0}
+.note{color:#52627a;font-size:14px;line-height:1.7}.warn{background:#fff3e8;padding:12px;border-radius:9px;color:#873d0c}
+button,select,input{font:inherit}button{background:#284b9b;color:white;border:0;border-radius:8px;padding:10px 14px;cursor:pointer}button:disabled{opacity:.5}
+select,input[type=number]{padding:8px;border:1px solid #ccd5e3;border-radius:8px}
+.controls{display:flex;gap:12px;flex-wrap:wrap;align-items:center}.statgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(155px,1fr));gap:10px}
+.stat{border:1px solid #dde5f0;border-radius:9px;padding:12px}.stat strong{display:block;font-size:25px}
+table{border-collapse:collapse;width:100%;font-size:14px}th,td{border:1px solid #dce3ed;padding:9px;text-align:center}th{background:#f2f5fa}.good{background:#e2f5e9;font-weight:bold}
+.scroller{overflow:auto}.bar{height:12px;background:#e7ecf4;border-radius:8px;overflow:hidden}.bar>i{display:block;height:100%;background:#4263c4}
+.mrow{display:grid;grid-template-columns:145px 1fr 80px;gap:10px;align-items:center;margin:12px 0}
+#status{white-space:pre-wrap}.small{font-size:12px;color:#67758a}
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@latest/dist/tf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@teachablemachine/image@latest/dist/teachablemachine-image.min.js"></script>
+</head><body><main>
+<h1>예각 · 직각 · 둔각 · 각 아님 | 모델 버전별 성능 평가</h1>
+<p class="note">같은 평가 이미지로 각 모델을 비교합니다. 실제 예측 결과를 기반으로 정분류율·혼동행렬을 계산하며, 파일은 브라우저에서만 처리합니다.</p>
+<section class="card"><h2>1. 모델과 평가 사진 선택</h2>
+<div class="controls"><label>모델 <select id="version"><option value="v1">v1</option><option value="v2">v2</option><option value="v3">v3</option><option value="v4">v4</option><option value="v5">v5</option><option value="v6">v6</option><option value="v7" selected>v7 (main 루트)</option></select></label>
+<button id="load">선택한 모델 불러오기</button></div>
+<p class="note">GitHub 모델 파일이 손상되었거나 자동 로드가 실패하면 아래에서 해당 버전의 원본 Teachable Machine 내보내기 파일 3개를 선택하세요.</p>
+<div class="controls"><label>모델 파일 3개 <input id="local" type="file" multiple accept=".json,.bin"></label><button id="loadlocal">선택 파일로 불러오기</button></div>
+<hr style="border:0;border-top:1px solid #e2e8f0;margin:18px 0">
+<p class="note">평가 이미지는 <code>acute angle01.png</code>, <code>right angle_02.jpg</code>처럼 클래스명으로 시작하거나, 클래스 이름의 폴더에 담겨 있어야 합니다. ZIP은 하위 폴더도 읽습니다. <b>학습에 사용하지 않은 고정 개발용 사진</b>을 모든 버전에 동일하게 사용하세요.</p>
+<div class="controls"><label>이미지 파일 여러 장 <input id="images" type="file" multiple accept="image/*"></label>
+<label>또는 ZIP <input id="zip" type="file" accept=".zip"></label></div>
+<div class="controls"><label>기준값 <input id="threshold" type="number" min="0" max="1" step=".05" value=".50" style="width:90px"></label>
+<button id="run" disabled>정분류율·혼동행렬 계산</button><button id="csv" disabled>결과 CSV 저장</button></div>
+<p id="status" class="note">모델을 불러오세요.</p><p class="warn">주의: 이 화면의 숫자는 예측 실행 후에만 생성됩니다. 학습 데이터 장수는 Teachable Machine 모델 파일에 기록되지 않아 별도로 확인해야 합니다. 기준값 미만은 '모르겠어요'로 집계합니다.</p></section>
+<section class="card" id="report" hidden><h2>2. 전체 평가 결과</h2><div class="statgrid" id="stats"></div>
+<p class="note" id="detail"></p><h2>3. 클래스별 정분류율</h2><div id="bars"></div>
+<h2>4. 혼동행렬</h2><p class="note">행: 실제 정답 / 열: 모델 예측. 기준값 미만은 '모르겠어요' 열에 표시합니다.</p><div class="scroller" id="matrix"></div>
+<h2>5. 오분류·보류 목록</h2><div class="scroller" id="errors"></div></section>
+<section class="card"><h2>평가 기준</h2><p class="note">전체 정분류율 = 정답 수 ÷ 평가 이미지 수 × 100. 응답 정확도 = 정답 수 ÷ 모델이 답한 이미지 수 × 100. 보류율 = '모르겠어요' 수 ÷ 전체 이미지 수 × 100. 클래스별 정분류율 = 해당 클래스 정답 수 ÷ 해당 클래스 평가 이미지 수 × 100. 모델 간 공정한 비교를 위해 동일한 평가 사진과 동일한 기준값을 사용해야 합니다.</p></section>
+</main>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script>
+const $=id=>document.getElementById(id);
+const names=['acute angle','right angle','obtuse angle','not angle'];
+let model=null, results=[], currentVersion='', currentLabels=[];
+const safe=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const pct=(n,d)=>(d?100*n/d:0).toFixed(1)+'%';
+function setStatus(s){$('status').textContent=s}
+function infer(name){
+ const lower=name.toLowerCase().replace(/\\/g,'/');
+ const folder=lower.split('/').slice(0,-1).reverse().find(part=>names.includes(part));
+ if(folder)return folder;
+ const base=lower.split('/').pop();
+ return [...names].sort((a,b)=>b.length-a.length).find(x=>base.startsWith(x))||null;
+}
+function updateLoaded(m,v){
+ model=m;currentVersion=v;currentLabels=m.getClassLabels();
+ $('run').disabled=false;$('report').hidden=true;$('csv').disabled=true;
+ setStatus(v+' 모델 준비 완료: '+currentLabels.join(', '));
+}
+$('load').onclick=async()=>{
+ const v=$('version').value; $('run').disabled=true;setStatus(v+' 불러오는 중…');
+ try{
+  const base=v==='v7'?'./':'./'+v+'/';
+  const m=await tmImage.load(base+'model.json',base+'metadata.json');
+  updateLoaded(m,v);
+ }catch(e){setStatus('자동 불러오기 실패 ('+v+'): '+e.message+'\n해당 버전의 원본 모델 파일 3개를 선택하세요.');}
+};
+$('loadlocal').onclick=async()=>{
+ const files=[...$('local').files], find=n=>files.find(f=>f.name===n);
+ if(!['model.json','metadata.json','weights.bin'].every(find)){setStatus('model.json, metadata.json, weights.bin 3개를 모두 선택하세요.');return;}
+ try{setStatus('선택한 로컬 모델을 불러오는 중…');updateLoaded(await tmImage.loadFromFiles(find('model.json'),find('weights.bin'),find('metadata.json')),$('version').value+' (로컬)');}
+ catch(e){setStatus('로컬 모델 불러오기 실패: '+e.message);}
+};
+async function collect(){
+ const arr=[...$('images').files].map(f=>({name:f.name,blob:f}));
+ const zf=$('zip').files[0];
+ if(zf){
+  const zip=await JSZip.loadAsync(zf);
+  for(const [name,item] of Object.entries(zip.files)){
+   if(!item.dir && /\.(png|jpg|jpeg|webp|bmp)$/i.test(name)){
+    const b=await item.async('blob');arr.push({name,blob:b});
+   }
+  }
+ }
+ return arr;
+}
+async function predictFile(blob){
+ const url=URL.createObjectURL(blob);
+ try{
+  const im=new Image();im.src=url;await im.decode();
+  const p=await model.predict(im);
+  return [...p].sort((a,b)=>b.probability-a.probability);
+ }finally{URL.revokeObjectURL(url)}
+}
+$('run').onclick=async()=>{
+ if(!model)return;
+ const files=await collect();
+ if(!files.length){setStatus('평가 사진 또는 ZIP을 선택하세요.');return;}
+ const threshold=Number($('threshold').value);
+ if(!Number.isFinite(threshold)||threshold<0||threshold>1){setStatus('기준값은 0~1 사이로 입력하세요.');return;}
+ $('run').disabled=true;$('csv').disabled=true;$('report').hidden=true;results=[];
+ try{
+  for(let i=0;i<files.length;i++){
+   const f=files[i],actual=infer(f.name);
+   if(!actual){results.push({file:f.name,actual:'',pred:'',prob:0,status:'정답 라벨 없음'});continue;}
+   setStatus(`${currentVersion} | ${i+1}/${files.length} 처리 중: ${f.name}`);
+   try{
+    const pred=await predictFile(f.blob),best=pred[0],chosen=best.probability>=threshold?best.className:'모르겠어요';
+    results.push({file:f.name,actual,pred:chosen,prob:best.probability,status:chosen==='모르겠어요'?'보류':chosen===actual?'정답':'오답'});
+   }catch(e){results.push({file:f.name,actual,pred:'',prob:0,status:'이미지 오류: '+e.message});}
+  }
+  render(threshold);
+  setStatus(`${currentVersion}: ${results.length}개 입력 중 ${results.filter(r=>['정답','오답','보류'].includes(r.status)).length}개 평가 완료.`);
+  $('csv').disabled=false;
+ }catch(e){setStatus('평가 실패: '+e.message)}
+ finally{$('run').disabled=false}
+};
+function render(t){
+ const valid=results.filter(r=>['정답','오답','보류'].includes(r.status));
+ const correct=valid.filter(r=>r.status==='정답').length, answered=valid.filter(r=>r.status!=='보류').length,held=valid.length-answered;
+ $('stats').innerHTML=[['모델',currentVersion],['평가 사진',valid.length+'장'],['정답',correct+'장'],['전체 정분류율',pct(correct,valid.length)],['응답 정확도',pct(correct,answered)],['보류',held+'장']].map(([k,v])=>`<div class="stat">${safe(k)}<strong>${safe(v)}</strong></div>`).join('');
+ $('detail').textContent=`기준값 ${t.toFixed(2)} / 답한 사진 ${answered}장 / 오답 ${answered-correct}장 / 보류율 ${pct(held,valid.length)} / 제외(라벨 없음·파일 오류) ${results.length-valid.length}장`;
+ $('bars').innerHTML=names.map(n=>{
+  const a=valid.filter(r=>r.actual===n),c=a.filter(r=>r.status==='정답').length;
+  return `<div class="mrow"><span>${safe(n)}</span><div class="bar"><i style="width:${a.length?100*c/a.length:0}%"></i></div><b>${pct(c,a.length)} (${c}/${a.length})</b></div>`;
+ }).join('');
+ const cols=[...names,'모르겠어요'];
+ $('matrix').innerHTML='<table><thead><tr><th>실제 ↓ / 예측 →</th>'+cols.map(n=>`<th>${safe(n)}</th>`).join('')+'</tr></thead><tbody>'+
+ names.map(a=>'<tr><th>'+safe(a)+'</th>'+cols.map(p=>`<td class="${a===p?'good':''}">${valid.filter(r=>r.actual===a&&r.pred===p).length}</td>`).join('')+'</tr>').join('')+'</tbody></table>';
+ const errs=results.filter(r=>r.status!=='정답');
+ $('errors').innerHTML='<table><thead><tr><th>파일</th><th>실제</th><th>예측</th><th>최고 예측확률</th><th>상태</th></tr></thead><tbody>'+
+ errs.map(r=>`<tr><td>${safe(r.file)}</td><td>${safe(r.actual)}</td><td>${safe(r.pred)}</td><td>${(r.prob*100).toFixed(1)}%</td><td>${safe(r.status)}</td></tr>`).join('')+'</tbody></table>';
+ $('report').hidden=false;
+}
+$('csv').onclick=()=>{
+ const rows=[['model','file','actual','prediction','max_probability','status'],...results.map(r=>[currentVersion,r.file,r.actual,r.pred,r.prob,r.status])];
+ const content='\ufeff'+rows.map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type:'text/csv;charset=utf-8'}));a.download='angle_evaluation_'+currentVersion.replace(/\W/g,'_')+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+};
+</script></body></html>
