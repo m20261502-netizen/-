@@ -94,7 +94,7 @@ const CONFIG = {
   details summary { cursor:pointer; font-weight:600; }
   details input { font-size:14px; margin-top:8px; max-width:100%; }
   .compliance { margin:0; background:#fff; border:2px solid var(--line); border-radius:14px; overflow:hidden; }
-  .compliance summary { padding:12px 14px; color:var(--ink); }
+  .compliance summary { padding:8px 14px; color:var(--ink); line-height:1.35; }
   .compliance table { width:100%; border-collapse:collapse; table-layout:fixed; font-size:15px; }
   .compliance th, .compliance td { border-top:2px solid var(--line); padding:10px 12px; text-align:left; line-height:1.45; }
   .compliance th { background:#EAF0F7; font-size:16px; }
@@ -186,7 +186,7 @@ const CONFIG = {
     <p class="subtitle">💡 AI의 판정은 참고용이에요! 여러분이 직접 잰 각도기 눈금과 결과를 비교해봅시다.</p>
     <p class="privacy-note">🔒 사진은 이 기기 안에서만 분석되며 저장하거나 외부로 보내지 않습니다. 이름과 로그인도 필요하지 않습니다.</p>
   </div>
-  <details class="compliance" open>
+  <details class="compliance">
     <summary>점검 항목</summary>
     <table aria-label="모델 배포 점검 항목">
       <thead>
